@@ -50,6 +50,30 @@
   #sqBubble { background:#fff; border:3px solid #1c1c28; border-radius:14px;
     padding:8px 12px; font-size:13px; font-weight:600; color:#1c1c28;
     box-shadow:0 4px 14px rgba(0,0,0,.4); }
+  /* main menu */
+  #menu { position:fixed; inset:0; z-index:40; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:10px; padding:20px;
+    background:linear-gradient(160deg,#2a1a4e 0%,#4b2a86 45%,#0f6f7a 100%); }
+  #menu.hidden { display:none; }
+  .menu-kicker { color:#7CFC00; font-weight:700; font-size:14px; letter-spacing:3px; text-transform:uppercase; }
+  .menu-title { color:#ffd23f; font-size:min(64px,15vw); font-weight:900; font-style:italic;
+    -webkit-text-stroke:2px #1b4f9c; text-shadow:4px 4px 0 #1b4f9c; letter-spacing:1px; }
+  #menuCanvas { width:min(420px,84vw); height:auto; border-radius:16px;
+    border:3px solid rgba(255,255,255,.35); background:#0b0b18; }
+  .menu-btns { display:flex; gap:12px; margin-top:6px; }
+  .menu-btns button { font-size:17px; font-weight:800; border:3px solid #fff;
+    border-radius:999px; padding:12px 26px; cursor:pointer; color:#1c1c28; background:#ffd23f;
+    box-shadow:0 4px 0 rgba(0,0,0,.35); }
+  .menu-btns button:active { transform:translateY(2px); box-shadow:none; }
+  #introMenuBtn { background:#fff; }
+  .menu-note { color:rgba(255,255,255,.75); font-size:12px; }
+  body.menu #hud, body.menu .hudbtn, body.menu #dpad, body.menu #squirmy { display:none !important; }
+  /* pause */
+  #pauseOverlay { position:fixed; inset:0; z-index:50; display:none;
+    align-items:center; justify-content:center; background:rgba(5,5,12,.7);
+    color:#fff; font-size:20px; font-weight:800; cursor:pointer; text-align:center; padding:20px; }
+  #pauseOverlay.show { display:flex; }
+  #muteBtn { right:14px; bottom:288px; background:#5c5c8a; }
   /* intro cinematic */
   #introLayer { position:fixed; inset:0; z-index:30; display:none; }
   #introLayer.show { display:block; }
@@ -122,7 +146,7 @@
   #closeHint.open { display:block; }
 </style>
 </head>
-<body>
+<body class="menu">
 <canvas id="game"></canvas>
 <div id="hud">
   <div class="title">hey, sup?</div>
@@ -140,9 +164,21 @@
 <div id="doorPrompt"></div>
 <div id="squirmy"><img src="assets/squirmy.webp" alt="Squirmy"><div id="sqBubble"></div></div>
 <button id="introBtn" class="hudbtn" aria-label="Replay intro">🎬</button>
+<button id="muteBtn" class="hudbtn" aria-label="Mute">🔊</button>
 <div id="introLayer"></div>
 <div id="caption"></div>
 <button id="skipIntro">Skip ››</button>
+<div id="menu">
+  <div class="menu-kicker">a 90s retro adventure</div>
+  <div class="menu-title">hey, sup?</div>
+  <canvas id="menuCanvas" width="420" height="170"></canvas>
+  <div class="menu-btns">
+    <button id="startBtn">▶ Start</button>
+    <button id="introMenuBtn">🎬 Intro</button>
+  </div>
+  <div class="menu-note">sound starts on tap 🔊</div>
+</div>
+<div id="pauseOverlay">⏸ Paused — tap to resume</div>
 <div id="phoneOverlay">
   <div id="phone">
     <div class="notch"></div>
@@ -267,6 +303,7 @@ dpad.querySelectorAll('button').forEach(btn => {
     e.preventDefault();
     keys[k] = true;
     btn.classList.add('pressed');
+    AudioSys.sfx('tick');
     if (k === 'ArrowUp') tryEnter();
     if (k === 'ArrowDown') tryExit();
   };
@@ -307,6 +344,7 @@ function tryEnter() {
   const d = doorAt();
   if (d) {
     enteredFrom = d; scene = d; player.x = worldW() * 0.5; player.animT = 0;
+    AudioSys.sfx('whoosh'); AudioSys.startMusic(d);
     if (d === 'arcade') squirmyTip('arcade', 'The arcade! Mullet Kart grudge matches go down here. Check the Events app on your phone!');
     if (d === 'mall') squirmyTip('mall', 'The food court! Best chilli dogs in the bizarro 90s. Probably.');
   }
@@ -315,9 +353,10 @@ function tryExit() {
   if (scene === 'street' || !enteredFrom) return;
   const d = enteredFrom;
   scene = 'street'; enteredFrom = null;
+  AudioSys.sfx('whoosh'); AudioSys.startMusic('street');
   player.x = worldW() * ((DOORS[d][0] + DOORS[d][1]) / 2); player.animT = 0;
 }
-doorPrompt.addEventListener('click', () => { scene === 'street' ? tryEnter() : tryExit(); });
+doorPrompt.addEventListener('click', () => { AudioSys.sfx('click'); scene === 'street' ? tryEnter() : tryExit(); });
 
 // squirmy helper
 const squirmyEl = document.getElementById('squirmy');
@@ -342,7 +381,7 @@ const introLayer = document.getElementById('introLayer');
 const captionEl = document.getElementById('caption');
 const skipBtn = document.getElementById('skipIntro');
 const standImg = new Image(); standImg.src = 'assets/stand.webp';
-let mode = 'play';
+let mode = 'menu';
 const WX = 0.63, WY = 0.46; // serving-window center, fraction of screen
 const INTRO = { beat: 0, t: 0, portalR: 0, flash: 0, spin: 0, suckT: 0, kyleT: 0 };
 const BEATS = [
@@ -376,13 +415,18 @@ function startIntro() {
   skipBtn.classList.add('show');
   captionEl.innerHTML = BEATS[0].cap;
 }
-function finishIntro() {
-  mode = 'play';
-  document.body.classList.remove('intro');
+function enterGame() {
+  menuEl.classList.add('hidden');
+  document.body.classList.remove('menu', 'intro');
   introLayer.classList.remove('show');
   captionEl.classList.remove('show');
   skipBtn.classList.remove('show');
+  mode = 'play';
+  AudioSys.startMusic('street');
+}
+function finishIntro() {
   try { localStorage.setItem('heysup_intro', '1'); } catch (e) {}
+  enterGame();
   toast('Find each other. \u{1F32A}\uFE0F');
 }
 function nextBeat() {
@@ -390,6 +434,9 @@ function nextBeat() {
   INTRO.t = 0;
   if (INTRO.beat >= BEATS.length) { finishIntro(); return; }
   captionEl.innerHTML = BEATS[INTRO.beat].cap;
+  if (INTRO.beat === 2) AudioSys.sfx('portal');
+  if (INTRO.beat === 4) AudioSys.sfx('dive');
+  if (INTRO.beat === 5) AudioSys.sfx('shimmer');
 }
 function drawIntro(dt) {
   INTRO.t += dt;
@@ -479,14 +526,139 @@ function drawIntro(dt) {
 }
 introLayer.addEventListener('click', () => { if (mode === 'intro') nextBeat(); });
 skipBtn.addEventListener('click', e => { e.stopPropagation(); finishIntro(); });
-document.getElementById('introBtn').addEventListener('click', startIntro);
+document.getElementById('introBtn').addEventListener('click', () => { AudioSys.sfx('click'); startIntro(); });
+
+// ---- main menu ----
+const menuEl = document.getElementById('menu');
+const menuCanvas = document.getElementById('menuCanvas');
+const mctx = menuCanvas.getContext('2d');
+const menuAnim = { t: 0 };
+function drawFrameTo(x, img, f, cx, feetY, s, dir) {
+  const dw = f.w * s, dh = f.h * s;
+  x.save();
+  x.translate(cx, feetY);
+  x.scale(dir, 1);
+  if (img.naturalWidth) x.drawImage(img, f.x, f.y, f.w, f.h, -dw / 2, -dh, dw, dh);
+  x.restore();
+}
+function drawMenu(dt) {
+  menuAnim.t += dt;
+  const t = menuAnim.t, Mw = menuCanvas.width, Mh = menuCanvas.height;
+  mctx.clearRect(0, 0, Mw, Mh);
+  if (streetImg.naturalWidth) {
+    const s = Math.max(Mw / streetImg.naturalWidth, Mh / streetImg.naturalHeight);
+    const dw = streetImg.naturalWidth * s, dh = streetImg.naturalHeight * s;
+    mctx.globalAlpha = 0.45;
+    mctx.drawImage(streetImg, (Mw - dw) / 2, (Mh - dh) / 2, dw, dh);
+    mctx.globalAlpha = 1;
+  } else { mctx.fillStyle = '#0b0b18'; mctx.fillRect(0, 0, Mw, Mh); }
+  // the duo strolls past each other on loop — animated sprite-sheet placeholders
+  const cyc = 9, ph = (t % cyc) / cyc;
+  const hx = -60 + ph * (Mw + 120);
+  const ex = (Mw + 60) - ph * (Mw + 120);
+  const gy = Mh - 12;
+  drawFrameTo(mctx, himImg, SHEETS.him.walk[Math.floor(t * 10) % SHEETS.him.walk.length], hx, gy, 0.42, 1);
+  drawFrameTo(mctx, herImg, SHEETS.her.walk[Math.floor(t * 10 + 4) % SHEETS.her.walk.length], ex, gy, 0.42, -1);
+}
+document.getElementById('startBtn').addEventListener('click', () => {
+  AudioSys.init(); AudioSys.sfx('click');
+  let seen = false;
+  try { seen = !!localStorage.getItem('heysup_intro'); } catch (e) {}
+  if (!seen) startIntro(); else enterGame();
+});
+document.getElementById('introMenuBtn').addEventListener('click', () => {
+  AudioSys.init(); AudioSys.sfx('click');
+  menuEl.classList.add('hidden');
+  document.body.classList.remove('menu');
+  startIntro();
+});
+const muteBtn = document.getElementById('muteBtn');
+muteBtn.addEventListener('click', () => {
+  AudioSys.init();
+  AudioSys.muted = !AudioSys.muted;
+  if (AudioSys.muted) AudioSys.suspend(); else AudioSys.resume();
+  muteBtn.textContent = AudioSys.muted ? '🔇' : '🔊';
+  if (!AudioSys.muted) AudioSys.sfx('click');
+});
 
 // character swap
 document.getElementById('swapBtn').addEventListener('click', () => {
+  AudioSys.sfx('click');
   char = char === 'him' ? 'her' : 'him';
   player.animT = 0;
   toast(char === 'him' ? 'playing as him 👦' : 'playing as her 👧');
 });
+
+// ---- procedural audio: all synthesized with Web Audio, no audio files ----
+const SONGS = {
+  menu:   { bpm: 112, root: 110, bass: [0,0,7,0,5,5,7,10], lead: [12,-1,15,-1,19,-1,15,12] },
+  street: { bpm: 120, root: 110, bass: [0,0,0,7,0,0,5,7],  lead: [-1,12,-1,15,-1,19,-1,15] },
+  arcade: { bpm: 136, root: 123, bass: [0,7,0,7,0,10,7,5], lead: [12,15,19,15,12,-1,10,12] },
+  mall:   { bpm: 100, root: 98,  bass: [0,0,5,5,7,7,5,3],  lead: [-1,-1,12,15,-1,17,15,12] }
+};
+function semi(root, st) { return root * Math.pow(2, st / 12); }
+const AudioSys = {
+  ctx: null, muted: false, musicInt: null, mStep: 0,
+  init() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) { try { this.ctx = new AC(); } catch (e) {} }
+    }
+    if (this.ctx && this.ctx.state === 'suspended' && !this.muted) this.ctx.resume();
+  },
+  tone(freq, dur, type, vol, slideTo, delay) {
+    if (!this.ctx || this.muted || paused) return;
+    type = type || 'square'; vol = (vol == null) ? 0.12 : vol; delay = delay || 0;
+    const t0 = this.ctx.currentTime + delay;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(Math.max(freq, 1), t0);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(slideTo, 1), t0 + dur);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(this.ctx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.05);
+  },
+  sfx(name) {
+    if (!this.ctx || this.muted) return;
+    switch (name) {
+      case 'click': this.tone(660, 0.07, 'square', 0.1); break;
+      case 'tick': this.tone(880, 0.05, 'square', 0.06); break;
+      case 'open': this.tone(440, 0.09, 'square', 0.1); this.tone(660, 0.1, 'square', 0.1, null, 0.08); break;
+      case 'close': this.tone(660, 0.09, 'square', 0.1); this.tone(440, 0.1, 'square', 0.1, null, 0.08); break;
+      case 'whoosh': this.tone(180, 0.35, 'sawtooth', 0.1, 900); break;
+      case 'dive': this.tone(900, 0.4, 'sawtooth', 0.1, 150); break;
+      case 'pop': this.tone(520, 0.12, 'sine', 0.14, 940); break;
+      case 'flag': this.tone(420, 0.07, 'square', 0.1); break;
+      case 'portal': this.tone(70, 1.2, 'sawtooth', 0.12, 320); this.tone(140, 1.2, 'triangle', 0.08, 640); break;
+      case 'shimmer': [880, 1174, 1568].forEach((f, i) => this.tone(f, 0.25, 'sine', 0.08, null, i * 0.12)); break;
+      case 'win': [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.16, 'square', 0.1, null, i * 0.1)); break;
+      case 'lose': this.tone(300, 0.5, 'sawtooth', 0.12, 90); break;
+    }
+  },
+  startMusic(modeName) {
+    const song = SONGS[modeName] || SONGS.street;
+    this.mStep = 0;
+    if (this.musicInt) clearInterval(this.musicInt);
+    const stepDur = 60 / song.bpm / 2 * 1000;
+    this.musicInt = setInterval(() => {
+      if (!this.ctx || this.muted || paused) return;
+      const i = this.mStep % 8;
+      const b = song.bass[i], l = song.lead[i];
+      if (b >= 0) this.tone(semi(song.root, b), 0.16, 'triangle', 0.085);
+      if (l >= 0) this.tone(semi(song.root * 2, l), 0.12, 'square', 0.04);
+      this.mStep++;
+    }, stepDur);
+  },
+  stopMusic() { if (this.musicInt) clearInterval(this.musicInt); this.musicInt = null; },
+  suspend() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); },
+  resume() { if (this.ctx && this.ctx.state === 'suspended' && !this.muted) this.ctx.resume(); }
+};
+// first tap anywhere unlocks audio; menu gets its tune
+window.addEventListener('pointerdown', function unlock() {
+  AudioSys.init();
+  if (mode === 'menu' && !AudioSys.musicInt) AudioSys.startMusic('menu');
+}, { once: true });
 
 // phone
 const overlay = document.getElementById('phoneOverlay');
@@ -500,19 +672,20 @@ function toast(msg) {
 }
 document.getElementById('phoneBtn').addEventListener('click', e => {
   e.stopPropagation();
+  AudioSys.sfx('open');
   showScreen('pHome');
   overlay.classList.add('open'); closeHint.classList.add('open');
   squirmyTip('phone', "That's your phone! TamaGotcha lives in there — and WEEDSWEEPER, if you're feeling lucky. 🌿");
 });
 overlay.addEventListener('click', e => {
-  if (e.target === overlay) { overlay.classList.remove('open'); closeHint.classList.remove('open'); }
+  if (e.target === overlay) { overlay.classList.remove('open'); closeHint.classList.remove('open'); AudioSys.sfx('close'); }
 });
 function showScreen(id) {
   document.querySelectorAll('.pscreen').forEach(s => s.classList.remove('open'));
   document.getElementById(id).classList.add('open');
 }
 document.querySelectorAll('[data-back]').forEach(b =>
-  b.addEventListener('click', () => showScreen('pHome')));
+  b.addEventListener('click', () => { AudioSys.sfx('click'); showScreen('pHome'); }));
 
 const APPS = [
   ['🚪','Room'], ['⭐','Events'], ['📮','Mailbox'], ['👥','Friends'],
@@ -524,6 +697,7 @@ APPS.forEach(([ico, name]) => {
   d.className = 'app';
   d.innerHTML = '<span class="ico">' + ico + '</span>' + name;
   d.addEventListener('click', () => {
+    AudioSys.sfx('click');
     if (name === 'TamaGotcha') showScreen('pTama');
     else if (name === 'BAM') showScreen('pBam');
     else if (name === 'WEEDSWEEPER') {
@@ -547,15 +721,18 @@ function petUI() {
   moodEl.textContent = avg >= 70 ? 'thriving ✨' : avg >= 40 ? 'doing okay 🙂' : 'GRUMPY!! 😾';
 }
 document.getElementById('feedBtn').addEventListener('click', () => {
+  AudioSys.sfx('pop');
   pet.hunger = Math.min(100, pet.hunger + 25); petUI();
 });
 document.getElementById('playBtn').addEventListener('click', () => {
+  AudioSys.sfx('pop');
   pet.happiness = Math.min(100, pet.happiness + 25); petUI();
 });
 setInterval(() => {
+  if (paused) return;
   pet.hunger = Math.max(0, pet.hunger - 1);
   pet.happiness = Math.max(0, pet.happiness - 1);
-  if (document.getElementById('pTama').classList.contains('open')) petUI();
+  if (!paused && document.getElementById('pTama').classList.contains('open')) petUI();
 }, 2000);
 petUI();
 
@@ -585,6 +762,7 @@ function weedReveal(i) {
   if (wOver || wOpen.has(i) || wFlag.has(i)) return;
   if (wWeeds.has(i)) {
     wOver = true;
+    AudioSys.sfx('lose');
     weedStatus.textContent = 'PRANKED!! 🌿😱';
     wWeeds.forEach(w => wOpen.add(w));
     weedDraw();
@@ -603,8 +781,10 @@ function weedReveal(i) {
       }
     }
   }
+  AudioSys.sfx('tick');
   if (wOpen.size === WN * WN - WCOUNT) {
     wOver = true;
+    AudioSys.sfx('win');
     weedStatus.textContent = 'YARD CLEAN! 🏆✨';
   }
   weedDraw();
@@ -623,6 +803,7 @@ function weedDraw() {
     }
     d.addEventListener('click', () => {
       if (wFlagMode && !wOpen.has(i) && !wOver) {
+        AudioSys.sfx('flag');
         if (wFlag.has(i)) wFlag.delete(i); else wFlag.add(i);
         weedDraw();
       } else weedReveal(i);
@@ -630,6 +811,7 @@ function weedDraw() {
     d.addEventListener('contextmenu', e => {
       e.preventDefault();
       if (!wOpen.has(i) && !wOver) {
+        AudioSys.sfx('flag');
         if (wFlag.has(i)) wFlag.delete(i); else wFlag.add(i);
         weedDraw();
       }
@@ -639,6 +821,7 @@ function weedDraw() {
       lpTimer = setTimeout(() => {
         lpTimer = 'fired';
         if (!wOpen.has(i) && !wOver) {
+          AudioSys.sfx('flag');
           if (wFlag.has(i)) wFlag.delete(i); else wFlag.add(i);
           weedDraw();
         }
@@ -651,7 +834,7 @@ function weedDraw() {
     weedGrid.appendChild(d);
   }
 }
-document.getElementById('weedNew').addEventListener('click', weedNew);
+document.getElementById('weedNew').addEventListener('click', () => { AudioSys.sfx('click'); weedNew(); });
 weedFlagBtn.addEventListener('click', () => {
   wFlagMode = !wFlagMode;
   weedFlagBtn.textContent = '🚩 Flag: ' + (wFlagMode ? 'on' : 'off');
@@ -661,10 +844,27 @@ weedNew();
 
 // main loop
 let last = performance.now();
+
+// ---- pause everything when the tab goes inactive ----
+let paused = false;
+const pauseOverlay = document.getElementById('pauseOverlay');
+function setPaused(p) {
+  if (p === paused) return;
+  paused = p;
+  pauseOverlay.classList.toggle('show', p);
+  if (p) AudioSys.suspend();
+  else { AudioSys.resume(); last = performance.now(); }
+}
+document.addEventListener('visibilitychange', () => setPaused(document.hidden));
+window.addEventListener('blur', () => setPaused(true));
+window.addEventListener('focus', () => setPaused(false));
+pauseOverlay.addEventListener('click', () => setPaused(false));
 function frame(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
 
+  if (paused) { requestAnimationFrame(frame); return; }
+  if (mode === 'menu') { drawMenu(dt); requestAnimationFrame(frame); return; }
   if (mode === 'intro') { drawIntro(dt); requestAnimationFrame(frame); return; }
 
   const left = keys['ArrowLeft'] || keys['a'] || keys['A'] || touchLeft || (mouseDown && mouseDir === 'left');
@@ -719,9 +919,6 @@ function frame(now) {
 
   requestAnimationFrame(frame);
 }
-let seenIntro = false;
-try { seenIntro = !!localStorage.getItem('heysup_intro'); } catch (e) {}
-if (!seenIntro) startIntro();
 requestAnimationFrame(frame);
 </script>
 </body>
