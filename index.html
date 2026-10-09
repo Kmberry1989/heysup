@@ -100,11 +100,24 @@
     to { transform:scale(1.24) translate(-1.5%,1%); } }
   #splash .shade { position:absolute; inset:0;
     background:radial-gradient(ellipse at center, transparent 25%, rgba(5,5,12,.78) 100%); }
-  #splash .gametitle { position:absolute; top:calc(22px + env(safe-area-inset-top, 0px)); left:18px; right:18px;
-    display:flex; justify-content:flex-start; }
-  #splash .gametitle span { background:#f2f2f7; color:#000; font-size:clamp(26px,7vw,38px); font-weight:800;
-    letter-spacing:.5px; padding:12px 22px; border-radius:24px 24px 24px 7px;
-    box-shadow:0 4px 18px rgba(0,0,0,.45); animation:resumePulse 2.2s ease-in-out infinite; }
+  #splash .chat { position:absolute; top:calc(20px + env(safe-area-inset-top, 0px)); left:16px; right:16px;
+    display:flex; flex-direction:column; gap:10px; pointer-events:none; }
+  #splash .bub { max-width:74%; padding:10px 17px; font-size:clamp(17px,4.6vw,24px); font-weight:700;
+    line-height:1.3; opacity:0; box-shadow:0 3px 14px rgba(0,0,0,.35); }
+  #splash .bub.left { align-self:flex-start; background:#f2f2f7; color:#000;
+    border-radius:20px 20px 20px 6px; transform-origin:bottom left; }
+  #splash .bub.right { align-self:flex-end; background:#0a84ff; color:#fff;
+    border-radius:20px 20px 6px 20px; transform-origin:bottom right; }
+  #splash .bub.show { animation:msgIn .45s cubic-bezier(.2,1.35,.4,1) forwards; }
+  @keyframes msgIn { from { opacity:0; transform:translateY(16px) scale(.85); }
+    to { opacity:1; transform:none; } }
+  #splash .bub.typing { display:flex; gap:6px; padding:15px 18px; align-items:center; }
+  #splash .bub.typing i { width:8px; height:8px; border-radius:50%; background:#8e8e93;
+    animation:tblink 1s infinite; }
+  #splash .bub.typing i:nth-child(2) { animation-delay:.18s; }
+  #splash .bub.typing i:nth-child(3) { animation-delay:.36s; }
+  @keyframes tblink { 0%,60%,100% { opacity:.25; transform:none; }
+    30% { opacity:1; transform:translateY(-3px); } }
   #splash .tapstart { position:absolute; left:0; right:0; text-align:center;
     bottom:calc(30px + env(safe-area-inset-bottom, 0px)); }
   #splash .tapstart span { display:inline-block; color:#fff; font-size:18px; font-weight:800;
@@ -233,7 +246,7 @@
 <div id="splash">
   <div class="sshow" id="sshow"></div>
   <div class="shade"></div>
-  <div class="gametitle"><span>hey, sup?</span></div>
+  <div class="chat" id="splashChat"></div>
   <div class="tapstart"><span>▶ tap to start</span></div>
 </div>
 <div id="menu">
@@ -649,7 +662,38 @@ setInterval(() => {
   splashIdx = (splashIdx + 1) % imgs.length;
   imgs[splashIdx].classList.add('on');
 }, 3200);
+// ---- splash chat teaser: blank, then the conversation types itself in ----
+const splashChat = document.getElementById('splashChat');
+const chatTimers = [];
+function chatLater(ms, fn) {
+  chatTimers.push(setTimeout(() => {
+    if (document.body.contains(splash)) fn();
+  }, ms));
+}
+function chatTyping(side) {
+  const t = document.createElement('div');
+  t.className = 'bub typing show ' + side;
+  t.innerHTML = '<i></i><i></i><i></i>';
+  splashChat.appendChild(t);
+  return t;
+}
+function chatSay(side, text) {
+  const b = document.createElement('div');
+  b.className = 'bub ' + side;
+  b.textContent = text;
+  splashChat.appendChild(b);
+  requestAnimationFrame(() => b.classList.add('show'));
+}
+chatLater(1000, () => {
+  const t = chatTyping('left');
+  chatLater(800, () => { t.remove(); chatSay('left', 'hey, sup?'); });
+});
+chatLater(3600, () => {
+  const t = chatTyping('right');
+  chatLater(800, () => { t.remove(); chatSay('right', 'not much, you?'); });
+});
 splash.addEventListener('click', () => {
+  chatTimers.forEach(clearTimeout);
   AudioSys.init();
   AudioSys.sfx('click');
   splash.classList.add('hide');
