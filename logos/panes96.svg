@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 160">
+  <g>
+    <path d="M40 30 Q70 25 100 30 L100 72 Q70 67 40 72 Z" fill="#f25022"/>
+    <path d="M108 30 Q138 25 168 30 L168 72 Q138 67 108 72 Z" fill="#7fba00"/>
+    <path d="M40 80 Q70 75 100 80 L100 122 Q70 117 40 122 Z" fill="#00a4ef"/>
+    <path d="M108 80 Q138 75 168 80 L168 122 Q138 117 108 122 Z" fill="#ffb900"/>
+  </g>
+  <text x="200" y="88" font-family="Verdana, sans-serif" font-weight="bold" font-size="44" fill="#333333">Panes<tspan font-size="30" dy="-14"> 96</tspan></text>
+</svg>

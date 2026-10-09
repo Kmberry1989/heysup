@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>hey, sup? — prototype v2</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#0b0b12;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    touch-action:none; -webkit-user-select:none; user-select:none; }
+  #game { position:fixed; inset:0; display:block; }
+  #hud { position:fixed; top:10px; left:12px; color:#fff; z-index:5;
+    text-shadow:0 2px 0 #000,-1px 0 0 #000,1px 0 0 #000,0 -1px 0 #000; }
+  #hud .title { font-weight:800; font-size:18px; letter-spacing:.5px; }
+  #hud .hint { font-size:12px; opacity:.85; margin-top:2px; }
+  .hudbtn { position:fixed; z-index:5; width:56px; height:56px; border-radius:50%;
+    border:3px solid #fff; font-size:26px; display:flex; align-items:center;
+    justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); }
+  .hudbtn:active { transform:scale(.93); }
+  #phoneBtn { right:14px; bottom:16px; background:#7c5cff; }
+  #swapBtn { right:14px; bottom:84px; background:#ff9f1c; }
+  #doorPrompt { position:fixed; left:50%; bottom:90px; transform:translateX(-50%);
+    z-index:5; display:none; background:rgba(10,10,20,.82); color:#fff;
+    border:2px solid #ffd23f; border-radius:999px; padding:10px 22px;
+    font-size:15px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  #doorPrompt.show { display:block; }
+  /* phone */
+  #phoneOverlay { position:fixed; inset:0; z-index:10; display:none;
+    align-items:center; justify-content:center; background:rgba(5,5,12,.72); }
+  #phoneOverlay.open { display:flex; }
+  #phone { width:min(330px,86vw); aspect-ratio:9/16.2; background:#1c1c28;
+    border-radius:34px; border:6px solid #8e7cc3; overflow:hidden; position:relative;
+    box-shadow:0 12px 60px rgba(0,0,0,.7); }
+  #phone .notch { position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    width:110px; height:22px; background:#1c1c28; border-radius:12px; z-index:3; }
+  .pscreen { position:absolute; inset:0; padding:44px 14px 14px; display:none;
+    flex-direction:column; background:linear-gradient(#fdf6ec,#f3e4f7); }
+  .pscreen.open { display:flex; }
+  .appgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:8px; }
+  .app { background:#fff; border-radius:16px; padding:10px 4px; text-align:center;
+    font-size:11px; font-weight:600; color:#333; cursor:pointer;
+    box-shadow:0 2px 6px rgba(0,0,0,.12); }
+  .app .ico { font-size:28px; display:block; margin-bottom:4px; }
+  .app:active { transform:scale(.94); }
+  .phead { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .phead .back { font-size:20px; cursor:pointer; background:#fff; border-radius:50%;
+    width:34px; height:34px; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 6px rgba(0,0,0,.12); }
+  .phead .ptitle { font-weight:800; font-size:16px; }
+  #purrbyImg { width:150px; height:150px; object-fit:contain; align-self:center; margin:4px 0; }
+  .bar { margin:6px 0; font-size:12px; font-weight:700; color:#555; }
+  .bar .track { height:12px; background:#e5d9f2; border-radius:8px; margin-top:3px; overflow:hidden; }
+  .bar .fill { height:100%; border-radius:8px; transition:width .3s; }
+  #mood { text-align:center; font-weight:800; font-size:15px; margin:8px 0; color:#7b2d8b; }
+  .petbtns { display:flex; gap:10px; justify-content:center; margin-top:4px; }
+  .petbtns button { font-size:15px; font-weight:700; border:none; border-radius:999px;
+    padding:10px 20px; cursor:pointer; color:#fff; }
+  #feedBtn { background:#ff6b6b; } #playBtn { background:#4ecdc4; }
+  .petbtns button:active { transform:scale(.94); }
+  #bamImg { width:100%; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+  #toast { position:fixed; left:50%; bottom:110px; transform:translateX(-50%);
+    background:rgba(10,10,20,.9); color:#fff; padding:8px 18px; border-radius:999px;
+    font-size:13px; z-index:20; display:none; }
+  #toast.show { display:block; }
+  #closeHint { position:fixed; bottom:18px; left:0; right:0; text-align:center;
+    color:#fff; font-size:13px; z-index:11; display:none; text-shadow:0 2px 0 #000; }
+  #closeHint.open { display:block; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+  <div class="title">hey, sup?</div>
+  <div class="hint">prototype v2 &middot; &larr;&rarr;/AD walk &middot; &uarr; enter arcade &middot; tap phone</div>
+</div>
+<button id="swapBtn" class="hudbtn" aria-label="Swap character">🔄</button>
+<button id="phoneBtn" class="hudbtn" aria-label="Open phone">📱</button>
+<div id="doorPrompt"></div>
+<div id="phoneOverlay">
+  <div id="phone">
+    <div class="notch"></div>
+    <div id="pHome" class="pscreen open">
+      <div class="appgrid" id="appGrid"></div>
+    </div>
+    <div id="pTama" class="pscreen">
+      <div class="phead"><div class="back" data-back>‹</div><div class="ptitle">TamaGotcha</div></div>
+      <img id="purrbyImg" src="assets/purrby.webp" alt="Purrby">
+      <div id="mood">thriving ✨</div>
+      <div class="bar">Hunger<div class="track"><div class="fill" id="hungerFill" style="width:80%;background:#ff6b6b"></div></div></div>
+      <div class="bar">Happiness<div class="track"><div class="fill" id="happyFill" style="width:80%;background:#4ecdc4"></div></div></div>
+      <div class="petbtns">
+        <button id="feedBtn">🍔 Feed</button>
+        <button id="playBtn">🎾 Play</button>
+      </div>
+    </div>
+    <div id="pBam" class="pscreen">
+      <div class="phead"><div class="back" data-back>‹</div><div class="ptitle">BAM</div></div>
+      <img id="bamImg" src="assets/bam.webp" alt="BAM conversation">
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<div id="closeHint">tap outside the phone to close</div>
+<script>
+"use strict";
+// Sprite metadata extracted from the transparent keyed sheets (programmatic band scan)
+const SHEETS = {
+  him: {
+    idle: [{"x":230,"y":11,"w":124,"h":238},{"x":494,"y":11,"w":125,"h":238},{"x":763,"y":11,"w":124,"h":238},{"x":1033,"y":11,"w":125,"h":238},{"x":1299,"y":11,"w":125,"h":238},{"x":1566,"y":11,"w":124,"h":238}],
+    walk: [{"x":89,"y":264,"w":102,"h":182},{"x":320,"y":264,"w":102,"h":180},{"x":562,"y":264,"w":94,"h":182},{"x":789,"y":264,"w":101,"h":181},{"x":1024,"y":265,"w":102,"h":180},{"x":1258,"y":264,"w":104,"h":181},{"x":1488,"y":264,"w":106,"h":180},{"x":1730,"y":265,"w":100,"h":181}]
+  },
+  her: {
+    idle: [{"x":432,"y":14,"w":138,"h":239},{"x":745,"y":14,"w":138,"h":239},{"x":1058,"y":14,"w":138,"h":239},{"x":1357,"y":14,"w":139,"h":239}],
+    walk: [{"x":100,"y":291,"w":145,"h":237},{"x":356,"y":291,"w":136,"h":235},{"x":623,"y":291,"w":138,"h":238},{"x":890,"y":291,"w":127,"h":238},{"x":1148,"y":291,"w":138,"h":237},{"x":1404,"y":291,"w":148,"h":239},{"x":1667,"y":291,"w":151,"h":239}]
+  }
+};
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+const streetImg = new Image(); streetImg.src = 'assets/street.webp';
+const arcadeImg = new Image(); arcadeImg.src = 'assets/arcade.webp';
+const himImg = new Image(); himImg.src = 'assets/him.png';
+const herImg = new Image(); herImg.src = 'assets/her.png';
+SHEETS.him.img = himImg; SHEETS.her.img = herImg;
+const SCENE_IMG = { street: streetImg, arcade: arcadeImg };
+
+const player = { x: 400, dir: 1, moving: false, animT: 0, heightPx: 200 };
+let char = 'him';
+let scene = 'street';
+const SPEED = 300;
+const keys = {};
+let touchLeft = false, touchRight = false;
+
+window.addEventListener('keydown', e => {
+  if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)) e.preventDefault();
+  keys[e.key] = true;
+  if (e.key === 'ArrowUp') tryEnter();
+  if (e.key === 'ArrowDown') tryExit();
+});
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+const activeTouches = new Map();
+function touchDir(t) { return t.clientX < W / 2 ? 'left' : 'right'; }
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) activeTouches.set(t.identifier, touchDir(t));
+  updateTouch();
+}, {passive:false});
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) activeTouches.set(t.identifier, touchDir(t));
+  updateTouch();
+}, {passive:false});
+function touchEnd(e) {
+  for (const t of e.changedTouches) activeTouches.delete(t.identifier);
+  updateTouch();
+}
+canvas.addEventListener('touchend', touchEnd);
+canvas.addEventListener('touchcancel', touchEnd);
+function updateTouch() {
+  touchLeft = touchRight = false;
+  for (const d of activeTouches.values()) d === 'left' ? touchLeft = true : touchRight = true;
+}
+let mouseDown = false, mouseDir = null;
+canvas.addEventListener('mousedown', e => { mouseDown = true; mouseDir = touchDir(e); });
+window.addEventListener('mouseup', () => { mouseDown = false; mouseDir = null; });
+window.addEventListener('mousemove', e => { if (mouseDown) mouseDir = touchDir(e); });
+
+// scenes
+function bgAspect(img) {
+  return (img.naturalWidth && img.naturalHeight) ? img.naturalWidth / img.naturalHeight : 16/9;
+}
+function worldW() {
+  return Math.max(W, H * bgAspect(SCENE_IMG[scene]));
+}
+const DOOR = [0.60, 0.70]; // arcade door zone on street (fraction of worldW)
+const doorPrompt = document.getElementById('doorPrompt');
+function tryEnter() {
+  if (scene !== 'street') return;
+  const w = worldW(), zx = player.x / w;
+  if (zx >= DOOR[0] && zx <= DOOR[1]) { scene = 'arcade'; player.x = worldW() * 0.5; player.animT = 0; }
+}
+function tryExit() {
+  if (scene !== 'arcade') return;
+  scene = 'street'; player.x = worldW() * ((DOOR[0] + DOOR[1]) / 2); player.animT = 0;
+}
+doorPrompt.addEventListener('click', () => { scene === 'street' ? tryEnter() : tryExit(); });
+
+// character swap
+document.getElementById('swapBtn').addEventListener('click', () => {
+  char = char === 'him' ? 'her' : 'him';
+  player.animT = 0;
+  toast(char === 'him' ? 'playing as him 👦' : 'playing as her 👧');
+});
+
+// phone
+const overlay = document.getElementById('phoneOverlay');
+const closeHint = document.getElementById('closeHint');
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function toast(msg) {
+  toastEl.textContent = msg; toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
+}
+document.getElementById('phoneBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  showScreen('pHome');
+  overlay.classList.add('open'); closeHint.classList.add('open');
+});
+overlay.addEventListener('click', e => {
+  if (e.target === overlay) { overlay.classList.remove('open'); closeHint.classList.remove('open'); }
+});
+function showScreen(id) {
+  document.querySelectorAll('.pscreen').forEach(s => s.classList.remove('open'));
+  document.getElementById(id).classList.add('open');
+}
+document.querySelectorAll('[data-back]').forEach(b =>
+  b.addEventListener('click', () => showScreen('pHome')));
+
+const APPS = [
+  ['🚪','Room'], ['⭐','Events'], ['📮','Mailbox'], ['👥','Friends'],
+  ['💬','BAM'], ['🥚','TamaGotcha'], ['🌐','MyPlace'], ['⚙️','Settings']
+];
+const grid = document.getElementById('appGrid');
+APPS.forEach(([ico, name]) => {
+  const d = document.createElement('div');
+  d.className = 'app';
+  d.innerHTML = '<span class="ico">' + ico + '</span>' + name;
+  d.addEventListener('click', () => {
+    if (name === 'TamaGotcha') showScreen('pTama');
+    else if (name === 'BAM') showScreen('pBam');
+    else toast(name + ' — coming in v3');
+  });
+  grid.appendChild(d);
+});
+
+// TamaGotcha mini-app
+const pet = { hunger: 80, happiness: 80 };
+const hungerFill = document.getElementById('hungerFill');
+const happyFill = document.getElementById('happyFill');
+const moodEl = document.getElementById('mood');
+function petUI() {
+  hungerFill.style.width = pet.hunger + '%';
+  happyFill.style.width = pet.happiness + '%';
+  const avg = (pet.hunger + pet.happiness) / 2;
+  moodEl.textContent = avg >= 70 ? 'thriving ✨' : avg >= 40 ? 'doing okay 🙂' : 'GRUMPY!! 😾';
+}
+document.getElementById('feedBtn').addEventListener('click', () => {
+  pet.hunger = Math.min(100, pet.hunger + 25); petUI();
+});
+document.getElementById('playBtn').addEventListener('click', () => {
+  pet.happiness = Math.min(100, pet.happiness + 25); petUI();
+});
+setInterval(() => {
+  pet.hunger = Math.max(0, pet.hunger - 1);
+  pet.happiness = Math.max(0, pet.happiness - 1);
+  if (document.getElementById('pTama').classList.contains('open')) petUI();
+}, 2000);
+petUI();
+
+// main loop
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
+
+  const left = keys['ArrowLeft'] || keys['a'] || keys['A'] || touchLeft || (mouseDown && mouseDir === 'left');
+  const right = keys['ArrowRight'] || keys['d'] || keys['D'] || touchRight || (mouseDown && mouseDir === 'right');
+  player.moving = left !== right;
+  if (player.moving) {
+    player.dir = right ? 1 : -1;
+    player.x += player.dir * SPEED * dt;
+    player.animT += dt;
+  } else {
+    player.animT += dt * 0.4;
+  }
+
+  const w = worldW();
+  player.x = Math.max(60, Math.min(w - 60, player.x));
+  let camX = Math.max(0, Math.min(w - W, player.x - W / 2));
+
+  const img = SCENE_IMG[scene];
+  ctx.fillStyle = scene === 'arcade' ? '#2a1a3e' : '#7ec8f7';
+  ctx.fillRect(0, 0, W, H);
+  if (img.naturalWidth) ctx.drawImage(img, -camX, 0, w, H);
+
+  // door prompt
+  const zx = player.x / w;
+  if (scene === 'street' && zx >= DOOR[0] && zx <= DOOR[1]) {
+    doorPrompt.textContent = '▲ enter the arcade';
+    doorPrompt.classList.add('show');
+  } else if (scene === 'arcade') {
+    doorPrompt.textContent = '▼ back to the street';
+    doorPrompt.classList.add('show');
+  } else {
+    doorPrompt.classList.remove('show');
+  }
+
+  // player
+  const S = SHEETS[char];
+  const set = player.moving ? S.walk : S.idle;
+  const fps = player.moving ? 10 : 3;
+  const f = set[Math.floor(player.animT * fps) % set.length];
+  const dh = player.heightPx, dw = dh * (f.w / f.h);
+  const groundY = H * 0.84;
+  const dx = player.x - camX - dw / 2, dy = groundY - dh;
+  ctx.save();
+  if (player.dir < 0) {
+    ctx.translate(dx + dw / 2, 0); ctx.scale(-1, 1); ctx.translate(-(dx + dw / 2), 0);
+  }
+  if (S.img.naturalWidth) ctx.drawImage(S.img, f.x, f.y, f.w, f.h, dx, dy, dw, dh);
+  ctx.restore();
+  ctx.fillStyle = 'rgba(0,0,0,.18)';
+  ctx.beginPath();
+  ctx.ellipse(player.x - camX, groundY + 6, dw * 0.32, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

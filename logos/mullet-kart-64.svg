@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 160">
+  <defs><pattern id="chk" width="20" height="20" patternUnits="userSpaceOnUse">
+    <rect width="20" height="20" fill="#fff"/><rect width="10" height="10" fill="#111"/><rect x="10" y="10" width="10" height="10" fill="#111"/>
+  </pattern></defs>
+  <rect x="30" y="18" width="340" height="26" fill="url(#chk)" stroke="#111" stroke-width="3"/>
+  <text x="200" y="112" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-style="italic" font-size="52" fill="#e11d48" stroke="#ffffff" stroke-width="5" paint-order="stroke">MULLET KART 64</text>
+</svg>

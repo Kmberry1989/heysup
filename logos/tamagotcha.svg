@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 160">
+  <ellipse cx="200" cy="80" rx="165" ry="62" fill="#ffb3d9" stroke="#7b2d8b" stroke-width="5"/>
+  <text x="200" y="100" text-anchor="middle" font-family="Verdana, sans-serif" font-weight="bold" font-size="52" fill="#7b2d8b" stroke="#ffffff" stroke-width="4" paint-order="stroke">TamaGotcha</text>
+</svg>
