@@ -162,7 +162,7 @@
   <button class="right" data-k="ArrowRight" aria-label="Right">▶</button>
 </div>
 <div id="doorPrompt"></div>
-<div id="squirmy"><img src="assets/squirmy.webp" alt="Squirmy"><div id="sqBubble"></div></div>
+<div id="squirmy"><img src="game-assets/squirmy.webp" alt="Squirmy"><div id="sqBubble"></div></div>
 <button id="introBtn" class="hudbtn" aria-label="Replay intro">🎬</button>
 <button id="muteBtn" class="hudbtn" aria-label="Mute">🔊</button>
 <div id="introLayer"></div>
@@ -187,7 +187,7 @@
     </div>
     <div id="pTama" class="pscreen">
       <div class="phead"><div class="back" data-back>‹</div><div class="ptitle">TamaGotcha</div></div>
-      <img id="purrbyImg" src="assets/purrby.webp" alt="Purrby">
+      <img id="purrbyImg" src="game-assets/purrby.webp" alt="Purrby">
       <div id="mood">thriving ✨</div>
       <div class="bar">Hunger<div class="track"><div class="fill" id="hungerFill" style="width:80%;background:#ff6b6b"></div></div></div>
       <div class="bar">Happiness<div class="track"><div class="fill" id="happyFill" style="width:80%;background:#4ecdc4"></div></div></div>
@@ -198,7 +198,7 @@
     </div>
     <div id="pBam" class="pscreen">
       <div class="phead"><div class="back" data-back>‹</div><div class="ptitle">BAM</div></div>
-      <img id="bamImg" src="assets/bam.webp" alt="BAM conversation">
+      <img id="bamImg" src="game-assets/bam.webp" alt="BAM conversation">
     </div>
     <div id="pWeed" class="pscreen">
       <div class="phead"><div class="back" data-back>‹</div><div class="ptitle">WEEDSWEEPER</div></div>
@@ -240,12 +240,12 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-const streetImg = new Image(); streetImg.src = 'assets/street.webp';
-const arcadeImg = new Image(); arcadeImg.src = 'assets/arcade.webp';
-const mallImg = new Image(); mallImg.src = 'assets/mall.webp';
-const signImg = new Image(); signImg.src = 'assets/sign.webp';
-const himImg = new Image(); himImg.src = 'assets/him.png';
-const herImg = new Image(); herImg.src = 'assets/her.png';
+const streetImg = new Image(); streetImg.src = 'game-assets/street.webp';
+const arcadeImg = new Image(); arcadeImg.src = 'game-assets/arcade.webp';
+const mallImg = new Image(); mallImg.src = 'game-assets/mall.webp';
+const signImg = new Image(); signImg.src = 'game-assets/sign.webp';
+const himImg = new Image(); himImg.src = 'game-assets/him.png';
+const herImg = new Image(); herImg.src = 'game-assets/her.png';
 SHEETS.him.img = himImg; SHEETS.her.img = herImg;
 const SCENE_IMG = { street: streetImg, arcade: arcadeImg, mall: mallImg };
 const SCENE_BG = { street: '#7ec8f7', arcade: '#2a1a3e', mall: '#3e2a1a' };
@@ -381,7 +381,7 @@ squirmyEl.addEventListener('click', () => {
 const introLayer = document.getElementById('introLayer');
 const captionEl = document.getElementById('caption');
 const skipBtn = document.getElementById('skipIntro');
-const standImg = new Image(); standImg.src = 'assets/stand.webp';
+const standImg = new Image(); standImg.src = 'game-assets/stand.webp';
 let mode = 'menu';
 const WX = 0.63, WY = 0.46; // serving-window center, fraction of screen
 const INTRO = { beat: 0, t: 0, portalR: 0, flash: 0, spin: 0, suckT: 0, kyleT: 0 };

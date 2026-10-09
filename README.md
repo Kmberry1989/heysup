@@ -10,10 +10,10 @@ The persistent world is a bizarro 90s suburban street: separate starter bedrooms
 
 ## Repo layout
 
-- `prototype/` — playable HTML5 prototype (v2). Walkable side-scrolling street, character swap (him/her), enterable arcade, working phone with app grid and a TamaGotcha mini-app. Open `prototype/index.html` in a browser.
+- `index.html` (+ `game-assets/`) — the playable prototype, served at the Pages site root. Walkable side-scrolling street, character swap (him/her), enterable arcade and mall, working phone with app grid, TamaGotcha mini-app, and playable WEEDSWEEPER. Scripted intro cinematic plays on first visit.
 - `docs/` — game concept and asset-needs documents.
 - `logos/` — parody logo set as SVG (`index.html` previews them all).
-- `assets/` — art source files: character sprite sheets (normal + EMO US, transparent PNGs), backgrounds, phone hardware templates, Purrby stages, Squirmy mascot.
+- `assets/` — art source files: character sprite sheets (normal + EMO US, transparent PNGs), backgrounds, phone hardware templates, Purrby stages, Squirmy mascot, minigame arenas, the BROKENSPORT welcome sign.
 
 ## Status
 
