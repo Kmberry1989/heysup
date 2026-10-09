@@ -390,7 +390,7 @@ const BEATS = [
   { dur: 3.6, cap: "The OPEN sign flickers&hellip; and something tears open inside the window." },
   { dur: 3.2, cap: "<span class='who'>Kyle:</span> &ldquo;ROCHELLE!!&rdquo;" },
   { dur: 3.6, cap: "Kyle doesn&rsquo;t think. He dives." },
-  { dur: 2.8, cap: "Somewhere&hellip; stuck in the 90s." }
+  { dur: 2.8, cap: "BROKENSPORT&hellip; stuck in the 90s." }
 ];
 function drawCover(img) {
   const s = Math.max(W / img.naturalWidth, H / img.naturalHeight);
@@ -427,7 +427,7 @@ function enterGame() {
 function finishIntro() {
   try { localStorage.setItem('heysup_intro', '1'); } catch (e) {}
   enterGame();
-  toast('Find each other. \u{1F32A}\uFE0F');
+  toast('Welcome to BROKENSPORT. Find each other. \u{1F32A}\uFE0F');
 }
 function nextBeat() {
   INTRO.beat++;

@@ -10,7 +10,7 @@ A 90s suburban street you share with friends. Deck out your bedroom, raise a Tam
 
 You're married, living together in Kokomo. One day you get the bright idea to run a drive-through chilli dog stand straight out of your back bathroom window. The OPEN light flickers on... and a portal rips open in the window and sucks her through. He dives in after her just before it snaps shut.
 
-You land in separate corners of a bizarro doppelgänger world — your street, your town, but stuck in the 90s. The plan: find each other, enjoy the ride, make the time together count, and work on things between you along the way.
+You land in separate corners of BROKENSPORT, a bizarro doppelgänger world — your street, your town, but stuck in the 90s. The plan: find each other, enjoy the ride, make the time together count, and work on things between you along the way.
 
 ## The arch-nemeses: EMO US
 
@@ -32,7 +32,7 @@ Party minigame collections · Cozy shared worlds · Co-op life sim (90s suburban
 
 ## The world
 
-A persistent side-scrolling street in the bizarro 90s world — a doppelgänger of home, but everything's a decade off. You land separately: he gets a plain boy's bedroom, she gets a plain girl's bedroom. Bare walls, a bed, a dresser, a window — and the whole game ahead to make them yours. Decorate with progress: posters, VHS shelf, CRT, pog board, lava lamp, all of it.
+A persistent side-scrolling street in BROKENSPORT, the bizarro 90s world — a doppelgänger of home, but everything's a decade off. You land separately: he gets a plain boy's bedroom, she gets a plain girl's bedroom. Bare walls, a bed, a dresser, a window — and the whole game ahead to make them yours. Decorate with progress: posters, VHS shelf, CRT, pog board, lava lamp, all of it.
 
 The **arcade** is the event plaza; the **mall food court** is the hangout. Friends' rooms line the street — visit, leave notes, trade tapes. Other players wander by as ambient company — presence without pressure. And somewhere out there on the block, the other half of your duo is doing the same.
 
