@@ -243,6 +243,7 @@ resize();
 const streetImg = new Image(); streetImg.src = 'assets/street.webp';
 const arcadeImg = new Image(); arcadeImg.src = 'assets/arcade.webp';
 const mallImg = new Image(); mallImg.src = 'assets/mall.webp';
+const signImg = new Image(); signImg.src = 'assets/sign.webp';
 const himImg = new Image(); himImg.src = 'assets/him.png';
 const herImg = new Image(); herImg.src = 'assets/her.png';
 SHEETS.him.img = himImg; SHEETS.her.img = herImg;
@@ -886,6 +887,13 @@ function frame(now) {
   ctx.fillStyle = SCENE_BG[scene];
   ctx.fillRect(0, 0, W, H);
   if (img.naturalWidth) ctx.drawImage(img, -camX, 0, w, H);
+
+  // welcome-to-BROKENSPORT sign at the town entrance
+  if (scene === 'street' && signImg.naturalWidth) {
+    const sh = 240, sw = sh * (signImg.naturalWidth / signImg.naturalHeight);
+    const gy = H * 0.84;
+    ctx.drawImage(signImg, 200 - camX - sw / 2, gy - sh + 8, sw, sh);
+  }
 
   // door prompt
   if (scene === 'street') {
