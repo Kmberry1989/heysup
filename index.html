@@ -90,9 +90,14 @@
     transition:opacity .5s ease; overflow:hidden; }
   #splash.hide { opacity:0; pointer-events:none; }
   #splash .sshow { position:absolute; inset:0; }
-  #splash .sshow img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
-    opacity:0; transition:opacity 1.4s ease; }
-  #splash .sshow img.on { opacity:.85; }
+  #splash .sshow .cell { position:absolute; inset:0; opacity:0; transition:opacity 1.4s ease;
+    overflow:hidden; background:#000; }
+  #splash .sshow .cell.on { opacity:.95; }
+  #splash .sshow .cell img.bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+    filter:blur(26px) brightness(.6); animation:kb 7s ease-in-out infinite alternate; }
+  #splash .sshow .cell img.fg { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+  @keyframes kb { from { transform:scale(1.12) translate(0,0); }
+    to { transform:scale(1.24) translate(-1.5%,1%); } }
   #splash .shade { position:absolute; inset:0;
     background:radial-gradient(ellipse at center, transparent 25%, rgba(5,5,12,.78) 100%); }
   #splash .gametitle { position:absolute; top:calc(22px + env(safe-area-inset-top, 0px)); left:18px; right:18px;
@@ -628,10 +633,12 @@ squirmyEl.addEventListener('click', () => {
 const splash = document.getElementById('splash');
 const sshow = document.getElementById('sshow');
 ['game-assets/slide-1.webp', 'game-assets/slide-2.webp', 'game-assets/slide-3.webp', 'game-assets/slide-4.webp', 'game-assets/slide-5.webp', 'game-assets/slide-6.webp', 'game-assets/slide-7.webp', 'game-assets/slide-8.webp'].forEach((src, i) => {
-  const img = new Image();
-  img.src = src;
-  if (i === 0) img.classList.add('on');
-  sshow.appendChild(img);
+  const cell = document.createElement('div');
+  cell.className = 'cell' + (i === 0 ? ' on' : '');
+  const bg = new Image(); bg.className = 'bg'; bg.src = src; bg.alt = '';
+  const fg = new Image(); fg.className = 'fg'; fg.src = src; fg.alt = 'hey, sup? moment';
+  cell.appendChild(bg); cell.appendChild(fg);
+  sshow.appendChild(cell);
 });
 let splashIdx = 0;
 setInterval(() => {
