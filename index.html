@@ -507,8 +507,10 @@ function drawIntro(dt) {
     ctx.fillRect(wx - 230, wy - 230, 460, 460);
   }
 
-  // portal: blobby vortex sprite, additive glow
-  const targetR = b >= 2 ? 64 : 0;
+  // portal: blobby vortex sprite, additive glow — closes as the hero dives
+  let targetR = 0;
+  if (b === 2 || b === 3) targetR = 64;
+  else if (b === 4) targetR = Math.max(0, 64 * (1 - INTRO.kyleT / 2.1));
   INTRO.portalR += (targetR - INTRO.portalR) * Math.min(1, dt * 2.5);
   if (INTRO.portalR > 1 && portalImgs[0].naturalWidth) {
     const fr = portalImgs[Math.floor(INTRO.t * 8) % portalImgs.length];
@@ -521,16 +523,19 @@ function drawIntro(dt) {
     ctx.restore();
   }
 
-  // beats 1-2: both at the window, satisfied — leaning in for a kiss
+  // beats 1-2: both at the window, satisfied — leaning in for a kiss,
+  // then recoiling to opposite sides as the portal tears open
   if (b === 1 || b === 2) {
     const rise = b === 1 ? Math.min(1, bt / 0.8) : 1;
     const lean = b === 1 ? 0.05 + 0.13 * Math.min(1, bt / 3) : 0;
-    const tremble = b === 2 ? Math.sin(bt * 30) * 2 : 0;
-    const bob = Math.sin(bt * 2.2) * 4;
+    const rec = b === 2 ? 1 - Math.pow(1 - Math.min(1, bt / 0.5), 2) : 0;
+    const hop = b === 2 ? -Math.sin(Math.min(1, bt / 0.5) * Math.PI) * 34 : 0;
+    const tremble = b === 2 && bt > 0.5 ? Math.sin(bt * 30) * 2 : 0;
+    const bob = b === 1 ? Math.sin(bt * 2.2) * 4 : 0;
     const yOff = (1 - rise) * 70;
     const fV = INTRO.vSheet.idle[0], fH = INTRO.hSheet.idle[0];
-    drawSheetFrame(INTRO.vSheet.img, fV, wx - 78 + lean * 40, gy - 105 + yOff + bob, 0.62, lean);
-    drawSheetFrame(INTRO.hSheet.img, fH, wx + 78 - lean * 40 + tremble, gy - 105 + yOff - bob, 0.62, -lean);
+    drawSheetFrame(INTRO.vSheet.img, fV, wx - 78 + lean * 40 - 112 * rec, gy - 105 + yOff + bob + hop, 0.62, lean);
+    drawSheetFrame(INTRO.hSheet.img, fH, wx + 78 - lean * 40 + 112 * rec + tremble, gy - 105 + yOff - bob + hop, 0.62, -lean);
     if (b === 1 && bt > 1.4) {
       for (let i = 0; i < 3; i++) {
         const hp = (bt - 1.4 - i * 0.55) / 1.7;
@@ -552,7 +557,7 @@ function drawIntro(dt) {
     const p = Math.min(1, INTRO.suckT / 2.4);
     const ang = p * Math.PI * 5;
     const rad = 80 * (1 - p);
-    const sx = wx - 78, sy = gy - 105;
+    const sx = wx - 190, sy = gy - 105;
     const rx = sx + (wx - sx) * p + Math.cos(ang) * rad;
     const ry = sy + (wy - sy) * p - Math.sin(p * Math.PI) * 45;
     const s = 0.62 * (1 - p * 0.9);
@@ -565,7 +570,7 @@ function drawIntro(dt) {
       ctx.drawImage(INTRO.vFall, -dw / 2, -dh / 2, dw, dh);
       ctx.restore();
     }
-    if (INTRO.hReach.naturalWidth) drawIntroSprite(INTRO.hReach, wx + 115, gy - 105, 200, true);
+    if (INTRO.hReach.naturalWidth) drawIntroSprite(INTRO.hReach, wx + 190, gy - 105, 200, true);
     // leaves caught in the gust
     if (!INTRO.leaves.length) {
       const cols = ['#e8912d', '#c93a2e', '#e8b93c', '#7a9e3f', '#d4691e'];
@@ -600,15 +605,15 @@ function drawIntro(dt) {
   if (b === 4) {
     INTRO.kyleT += dt;
     const frames = INTRO.hSheet.walk;
-    const runDur = 0.7, diveDur = 0.9;
-    const xStart = wx + 110;
+    const runDur = 0.9, diveDur = 0.9;
+    const xStart = wx + 190;
     if (INTRO.kyleT < runDur) {
       const p = INTRO.kyleT / runDur;
       const f = frames[Math.floor(INTRO.kyleT * 14) % frames.length];
-      drawSheetFrame(INTRO.hSheet.img, f, xStart + ((wx + 55) - xStart) * p, gy - 105, 0.62, 0);
+      drawSheetFrame(INTRO.hSheet.img, f, xStart + ((wx + 60) - xStart) * p, gy - 105, 0.62, 0);
     } else if (INTRO.kyleT < runDur + diveDur) {
       const p = (INTRO.kyleT - runDur) / diveDur;
-      const x0 = wx + 55, y0 = gy - 105;
+      const x0 = wx + 60, y0 = gy - 105;
       const kx = x0 + (wx - x0) * p;
       const ky = y0 + (wy - y0) * p - Math.sin(p * Math.PI) * 60;
       const s = 0.62 * (1 - p * 0.55);
