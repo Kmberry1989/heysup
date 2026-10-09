@@ -67,6 +67,14 @@
   .menu-btns button:active { transform:translateY(2px); box-shadow:none; }
   #introMenuBtn { background:#fff; }
   .menu-note { color:rgba(255,255,255,.75); font-size:12px; }
+  .char-select { display:flex; gap:12px; }
+  .char-card { background:rgba(255,255,255,.08); border:3px solid rgba(255,255,255,.25);
+    border-radius:14px; padding:8px 10px 6px; cursor:pointer; color:#fff;
+    display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .char-card canvas { width:72px; height:88px; }
+  .char-card span { font-size:13px; font-weight:800; }
+  .char-card.selected { border-color:#ffd23f; background:rgba(255,210,63,.15);
+    box-shadow:0 0 14px rgba(255,210,63,.5); }
   body.menu #hud, body.menu .hudbtn, body.menu #dpad, body.menu #squirmy { display:none !important; }
   /* pause */
   #pauseOverlay { position:fixed; inset:0; z-index:50; display:none;
@@ -172,11 +180,15 @@
   <div class="menu-kicker">a 90s retro adventure</div>
   <div class="menu-title">hey, sup?</div>
   <canvas id="menuCanvas" width="420" height="170"></canvas>
+  <div class="char-select">
+    <button id="selHim" class="char-card"><canvas id="portHim" width="90" height="110"></canvas><span>Kyle</span></button>
+    <button id="selHer" class="char-card"><canvas id="portHer" width="90" height="110"></canvas><span>Rochelle</span></button>
+  </div>
   <div class="menu-btns">
     <button id="startBtn">▶ Start</button>
     <button id="introMenuBtn">🎬 Intro</button>
   </div>
-  <div class="menu-note">sound starts on tap 🔊</div>
+  <div class="menu-note">choose your hero &mdash; they&rsquo;re the one who dives in 🌪️</div>
 </div>
 <div id="pauseOverlay">⏸ Paused — tap to resume</div>
 <div id="phoneOverlay">
@@ -385,14 +397,22 @@ const standImg = new Image(); standImg.src = 'game-assets/stand.webp';
 let mode = 'menu';
 const WX = 0.63, WY = 0.46; // serving-window center, fraction of screen
 const INTRO = { beat: 0, t: 0, portalR: 0, flash: 0, spin: 0, suckT: 0, kyleT: 0 };
-const BEATS = [
-  { dur: 3.6, cap: "Kokomo. Friday night. They just cranked open the back bathroom window for business." },
-  { dur: 3.4, cap: "<span class='who'>Rochelle:</span> &ldquo;Chilli dogs are on. Lights on. We&rsquo;re OPEN.&rdquo;" },
-  { dur: 3.6, cap: "The OPEN sign flickers&hellip; and something tears open inside the window." },
-  { dur: 3.2, cap: "<span class='who'>Kyle:</span> &ldquo;ROCHELLE!!&rdquo;" },
-  { dur: 3.6, cap: "Kyle doesn&rsquo;t think. He dives." },
-  { dur: 2.8, cap: "BROKENSPORT&hellip; stuck in the 90s." }
-];
+// your pick is the hero who dives; the other gets taken by the portal
+function buildBeats() {
+  const heroIsHim = (char === 'him');
+  const heroName = heroIsHim ? 'Kyle' : 'Rochelle';
+  const victimName = heroIsHim ? 'Rochelle' : 'Kyle';
+  const heroPro = heroIsHim ? 'He' : 'She';
+  return [
+    { dur: 3.6, cap: "Kokomo. Friday night. They just cranked open the back bathroom window for business." },
+    { dur: 3.4, cap: "<span class='who'>" + victimName + ":</span> &ldquo;Chilli dogs are on. Lights on. We&rsquo;re OPEN.&rdquo;" },
+    { dur: 3.6, cap: "The OPEN sign flickers&hellip; and something tears open inside the window." },
+    { dur: 3.2, cap: "<span class='who'>" + heroName + ":</span> &ldquo;" + victimName.toUpperCase() + "!!&rdquo;" },
+    { dur: 3.6, cap: heroName + " doesn&rsquo;t think. " + heroPro + " dives." },
+    { dur: 2.8, cap: "BROKENSPORT&hellip; stuck in the 90s." }
+  ];
+}
+let BEATS = buildBeats();
 function drawCover(img) {
   const s = Math.max(W / img.naturalWidth, H / img.naturalHeight);
   const dw = img.naturalWidth * s, dh = img.naturalHeight * s;
@@ -409,6 +429,9 @@ function drawSheetFrame(img, f, cx, feetY, s, rot) {
 function startIntro() {
   INTRO.beat = 0; INTRO.t = 0; INTRO.portalR = 0; INTRO.flash = 0;
   INTRO.spin = 0; INTRO.suckT = 0; INTRO.kyleT = 0;
+  BEATS = buildBeats();
+  INTRO.vSheet = (char === 'him') ? SHEETS.her : SHEETS.him;
+  INTRO.hSheet = SHEETS[char];
   mode = 'intro';
   document.body.classList.add('intro');
   introLayer.classList.add('show');
@@ -481,9 +504,9 @@ function drawIntro(dt) {
     ctx.restore();
   }
 
-  // Rochelle at the window, then sucked in
+  // the victim at the window, then sucked in
   if (b >= 1) {
-    const f = SHEETS.her.idle[0];
+    const f = INTRO.vSheet.idle[0];
     let rx = wx, ry = gy - 105, s = 0.62, rot = 0;
     if (b >= 3) {
       INTRO.suckT += dt;
@@ -493,13 +516,13 @@ function drawIntro(dt) {
       s = 0.62 * (1 - e * 0.93);
       rot = e * 9;
     }
-    drawSheetFrame(SHEETS.her.img, f, rx, ry, s, rot);
+    drawSheetFrame(INTRO.vSheet.img, f, rx, ry, s, rot);
   }
 
-  // Kyle runs in and dives
+  // the hero runs in and dives
   if (b >= 4) {
     INTRO.kyleT += dt;
-    const frames = SHEETS.him.walk;
+    const frames = INTRO.hSheet.walk;
     const f = frames[Math.floor(INTRO.kyleT * 10) % frames.length];
     const runDur = 1.1, diveDur = 0.9;
     let kx, ky, rot = 0, s = 0.62;
@@ -515,7 +538,7 @@ function drawIntro(dt) {
       rot = -p * 1.4;
       s = 0.62 * (1 - p * 0.55);
     } else { kx = wx; ky = wy; s = 0.04; }
-    drawSheetFrame(SHEETS.him.img, f, kx, ky, s, rot);
+    drawSheetFrame(INTRO.hSheet.img, f, kx, ky, s, rot);
   }
 
   // white flash into the 90s
@@ -544,6 +567,11 @@ function drawFrameTo(x, img, f, cx, feetY, s, dir) {
 }
 function drawMenu(dt) {
   menuAnim.t += dt;
+  if (!menuAnim.portraits && himImg.naturalWidth && herImg.naturalWidth) {
+    drawPortrait('portHim', SHEETS.him);
+    drawPortrait('portHer', SHEETS.her);
+    menuAnim.portraits = true;
+  }
   const t = menuAnim.t, Mw = menuCanvas.width, Mh = menuCanvas.height;
   mctx.clearRect(0, 0, Mw, Mh);
   if (streetImg.naturalWidth) {
@@ -558,8 +586,11 @@ function drawMenu(dt) {
   const hx = -60 + ph * (Mw + 120);
   const ex = (Mw + 60) - ph * (Mw + 120);
   const gy = Mh - 12;
-  drawFrameTo(mctx, himImg, SHEETS.him.walk[Math.floor(t * 10) % SHEETS.him.walk.length], hx, gy, 0.42, 1);
-  drawFrameTo(mctx, herImg, SHEETS.her.walk[Math.floor(t * 10 + 4) % SHEETS.her.walk.length], ex, gy, 0.42, -1);
+  const hf = SHEETS.him.walk[Math.floor(t * 10) % SHEETS.him.walk.length];
+  const ef = SHEETS.her.walk[Math.floor(t * 10 + 4) % SHEETS.her.walk.length];
+  const targetH = 100; // his sprite renders at the same height as hers
+  drawFrameTo(mctx, himImg, hf, hx, gy, targetH / hf.h, 1);
+  drawFrameTo(mctx, herImg, ef, ex, gy, targetH / ef.h, -1);
 }
 document.getElementById('startBtn').addEventListener('click', () => {
   AudioSys.init(); AudioSys.sfx('click');
@@ -582,12 +613,37 @@ muteBtn.addEventListener('click', () => {
   if (!AudioSys.muted) AudioSys.sfx('click');
 });
 
+// ---- character select: your pick is the hero who dives ----
+function drawPortrait(canvasId, sheet) {
+  const c = document.getElementById(canvasId), x = c.getContext('2d');
+  const f = sheet.idle[0];
+  const s = Math.min(c.width / f.w, c.height / f.h) * 0.95;
+  const dw = f.w * s, dh = f.h * s;
+  x.clearRect(0, 0, c.width, c.height);
+  if (sheet.img.naturalWidth) x.drawImage(sheet.img, f.x, f.y, f.w, f.h, (c.width - dw) / 2, (c.height - dh) / 2, dw, dh);
+}
+function selectChar(c) {
+  char = c;
+  try { localStorage.setItem('heysup_char', c); } catch (e) {}
+  document.getElementById('selHim').classList.toggle('selected', c === 'him');
+  document.getElementById('selHer').classList.toggle('selected', c === 'her');
+  AudioSys.sfx('click');
+}
+document.getElementById('selHim').addEventListener('click', () => selectChar('him'));
+document.getElementById('selHer').addEventListener('click', () => selectChar('her'));
+try {
+  const sc = localStorage.getItem('heysup_char');
+  if (sc === 'him' || sc === 'her') char = sc;
+} catch (e) {}
+document.getElementById('selHim').classList.toggle('selected', char === 'him');
+document.getElementById('selHer').classList.toggle('selected', char === 'her');
+
 // character swap
 document.getElementById('swapBtn').addEventListener('click', () => {
   AudioSys.sfx('click');
   char = char === 'him' ? 'her' : 'him';
   player.animT = 0;
-  toast(char === 'him' ? 'playing as him 👦' : 'playing as her 👧');
+  toast(char === 'him' ? 'playing as Kyle 👦' : 'playing as Rochelle 👧');
 });
 
 // ---- procedural audio: all synthesized with Web Audio, no audio files ----
