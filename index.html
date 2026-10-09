@@ -121,7 +121,11 @@
   @keyframes tblink { 0%,60%,100% { opacity:.25; transform:none; }
     30% { opacity:1; transform:translateY(-3px); } }
   #splash .tapstart { position:absolute; left:0; right:0; text-align:center;
-    bottom:calc(30px + env(safe-area-inset-bottom, 0px)); }
+    bottom:calc(10px + env(safe-area-inset-bottom, 0px)); }
+  #splash .tapstart.enter { display:none; }
+  #splash .tapstart.enter.show { display:block; animation:enterIn .8s ease forwards; }
+  @keyframes enterIn { from { opacity:0; transform:translateY(10px); }
+    to { opacity:1; transform:none; } }
   #splash .tapstart span { display:inline-block; color:#fff; font-size:18px; font-weight:800;
     background:rgba(10,10,20,.65); border:2px solid #ffd23f; border-radius:999px; padding:10px 26px;
     animation:resumePulse 1.6s ease-in-out infinite; }
@@ -249,7 +253,8 @@
   <div class="sshow" id="sshow"></div>
   <div class="shade"></div>
   <div class="chat" id="splashChat"></div>
-  <div class="tapstart"><span>▶ tap to start</span></div>
+  <div class="tapstart" id="tapPill"><span>▶ tap to start</span></div>
+  <div class="tapstart enter" id="enterPill"><span>▶ tap to enter</span></div>
 </div>
 <div id="menu">
   <div class="menu-kicker">a 90s retro adventure</div>
@@ -644,26 +649,32 @@ squirmyEl.addEventListener('click', () => {
   clearTimeout(sqTimer);
 });
 
-// ---- splash screen ----
+// ---- splash screen: black + tap pill until the first tap, then the show ----
 const splash = document.getElementById('splash');
 const sshow = document.getElementById('sshow');
-['game-assets/slide-1.webp', 'game-assets/slide-2.webp', 'game-assets/slide-3.webp', 'game-assets/slide-4.webp', 'game-assets/slide-5.webp', 'game-assets/slide-6.webp', 'game-assets/slide-7.webp', 'game-assets/slide-8.webp'].forEach((src, i) => {
+const tapPill = document.getElementById('tapPill');
+const enterPill = document.getElementById('enterPill');
+const slideCells = [];
+['game-assets/slide-1.webp', 'game-assets/slide-2.webp', 'game-assets/slide-3.webp', 'game-assets/slide-4.webp', 'game-assets/slide-5.webp', 'game-assets/slide-6.webp', 'game-assets/slide-7.webp', 'game-assets/slide-8.webp'].forEach((src) => {
   const cell = document.createElement('div');
-  cell.className = 'cell' + (i === 0 ? ' on' : '');
+  cell.className = 'cell';
   const bg = new Image(); bg.className = 'bg'; bg.src = src; bg.alt = '';
   const fg = new Image(); fg.className = 'fg'; fg.src = src; fg.alt = 'hey, sup? moment';
   cell.appendChild(bg); cell.appendChild(fg);
   sshow.appendChild(cell);
+  slideCells.push(cell);
 });
-let splashIdx = 0;
-setInterval(() => {
-  if (!document.body.contains(splash)) return;
-  const imgs = sshow.children;
-  if (!imgs.length) return;
-  imgs[splashIdx].classList.remove('on');
-  splashIdx = (splashIdx + 1) % imgs.length;
-  imgs[splashIdx].classList.add('on');
-}, 5600);
+let splashIdx = 0, splashStarted = false, splashTimer = null;
+function startSlideshow() {
+  if (!slideCells.length || !document.body.contains(splash)) return;
+  slideCells[0].classList.add('on');
+  splashTimer = setInterval(() => {
+    if (!document.body.contains(splash)) { clearInterval(splashTimer); return; }
+    slideCells[splashIdx].classList.remove('on');
+    splashIdx = (splashIdx + 1) % slideCells.length;
+    slideCells[splashIdx].classList.add('on');
+  }, 5600);
+}
 // ---- splash chat teaser: blank, then the conversation types itself in ----
 const splashChat = document.getElementById('splashChat');
 const chatTimers = [];
@@ -693,30 +704,44 @@ const chatScript = [
   ['typing', 'left'], ['say', 'left', '...you in?'],
   ['typing', 'right'], ['say', 'right', 'omw!!'],
 ];
-let chatAt = 1200, curTyping = null;
-for (const step of chatScript) {
-  const at = chatAt, kind = step[0], side = step[1];
-  if (kind === 'typing') {
-    chatLater(at, () => { curTyping = chatTyping(side); });
-    chatAt += 1400;
-  } else {
-    const text = step[2];
-    chatLater(at, () => {
-      if (curTyping) { curTyping.remove(); curTyping = null; }
-      chatSay(side, text);
-    });
-    chatAt += 2000;
+function startSplashChat() {
+  let chatAt = 1200, curTyping = null;
+  for (const step of chatScript) {
+    const at = chatAt, kind = step[0], side = step[1];
+    if (kind === 'typing') {
+      chatLater(at, () => { curTyping = chatTyping(side); });
+      chatAt += 1400;
+    } else {
+      const text = step[2];
+      chatLater(at, () => {
+        if (curTyping) { curTyping.remove(); curTyping = null; }
+        chatSay(side, text);
+        AudioSys.sfx(side === 'left' ? 'textIn' : 'textOut');
+      });
+      chatAt += 2000;
+    }
   }
+  // after the conversation plays out, shrink the thread so the photos show through
+  chatLater(chatAt + 2500, () => splashChat.classList.add('mini'));
+  // then invite them in
+  chatLater(chatAt + 3500, () => enterPill.classList.add('show'));
 }
-// after the conversation plays out, shrink the thread so the photos show through
-chatLater(chatAt + 2500, () => splashChat.classList.add('mini'));
 splash.addEventListener('click', () => {
-  chatTimers.forEach(clearTimeout);
   AudioSys.init();
-  AudioSys.sfx('click');
-  splash.classList.add('hide');
-  setTimeout(() => splash.remove(), 600);
-}, { once: true });
+  if (!splashStarted) {
+    splashStarted = true;
+    AudioSys.sfx('click');
+    tapPill.style.display = 'none';
+    startSlideshow();
+    startSplashChat();
+  } else {
+    chatTimers.forEach(clearTimeout);
+    if (splashTimer) clearInterval(splashTimer);
+    AudioSys.sfx('click');
+    splash.classList.add('hide');
+    setTimeout(() => splash.remove(), 600);
+  }
+});
 
 // ---- intro cinematic ----
 const introLayer = document.getElementById('introLayer');
@@ -1225,6 +1250,8 @@ const AudioSys = {
       case 'whoosh': this.tone(180, 0.35, 'sawtooth', 0.1, 900); break;
       case 'dive': this.tone(900, 0.4, 'sawtooth', 0.1, 150); break;
       case 'pop': this.tone(520, 0.12, 'sine', 0.14, 940); break;
+      case 'textIn': this.tone(760, 0.07, 'sine', 0.11); this.tone(1010, 0.1, 'sine', 0.09, null, 0.07); break;
+      case 'textOut': this.tone(540, 0.1, 'sine', 0.09, 920); break;
       case 'flag': this.tone(420, 0.07, 'square', 0.1); break;
       case 'portal': this.tone(70, 1.2, 'sawtooth', 0.12, 320); this.tone(140, 1.2, 'triangle', 0.08, 640); break;
       case 'lever': this.tone(130, 0.18, 'square', 0.12, 55); this.tone(660, 0.5, 'sine', 0.06, 1320); break;
