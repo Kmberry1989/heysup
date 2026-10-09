@@ -50,6 +50,23 @@
   #sqBubble { background:#fff; border:3px solid #1c1c28; border-radius:14px;
     padding:8px 12px; font-size:13px; font-weight:600; color:#1c1c28;
     box-shadow:0 4px 14px rgba(0,0,0,.4); }
+  /* intro cinematic */
+  #introLayer { position:fixed; inset:0; z-index:30; display:none; }
+  #introLayer.show { display:block; }
+  #caption { position:fixed; left:50%; bottom:26px; transform:translateX(-50%);
+    z-index:31; display:none; max-width:min(560px,90vw);
+    background:rgba(5,5,12,.84); color:#fff; border:2px solid #ffd23f;
+    border-radius:14px; padding:12px 18px; font-size:15px; line-height:1.45;
+    text-align:center; }
+  #caption.show { display:block; }
+  #caption .who { color:#ffd23f; font-weight:800; }
+  #skipIntro { position:fixed; top:12px; right:12px; z-index:32; display:none;
+    background:rgba(10,10,20,.7); color:#fff; border:2px solid #fff;
+    border-radius:999px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer; }
+  #skipIntro.show { display:block; }
+  #introBtn { right:14px; bottom:220px; background:#b565d8; }
+  body.intro #hud, body.intro .hudbtn, body.intro #dpad,
+  body.intro #doorPrompt, body.intro #squirmy { display:none !important; }
   /* phone */
   #phoneOverlay { position:fixed; inset:0; z-index:10; display:none;
     align-items:center; justify-content:center; background:rgba(5,5,12,.72); }
@@ -122,6 +139,10 @@
 </div>
 <div id="doorPrompt"></div>
 <div id="squirmy"><img src="assets/squirmy.webp" alt="Squirmy"><div id="sqBubble"></div></div>
+<button id="introBtn" class="hudbtn" aria-label="Replay intro">🎬</button>
+<div id="introLayer"></div>
+<div id="caption"></div>
+<button id="skipIntro">Skip ››</button>
 <div id="phoneOverlay">
   <div id="phone">
     <div class="notch"></div>
@@ -316,6 +337,150 @@ squirmyEl.addEventListener('click', () => {
   clearTimeout(sqTimer);
 });
 
+// ---- intro cinematic ----
+const introLayer = document.getElementById('introLayer');
+const captionEl = document.getElementById('caption');
+const skipBtn = document.getElementById('skipIntro');
+const standImg = new Image(); standImg.src = 'assets/stand.webp';
+let mode = 'play';
+const WX = 0.63, WY = 0.46; // serving-window center, fraction of screen
+const INTRO = { beat: 0, t: 0, portalR: 0, flash: 0, spin: 0, suckT: 0, kyleT: 0 };
+const BEATS = [
+  { dur: 3.6, cap: "Kokomo. Friday night. They just cranked open the back bathroom window for business." },
+  { dur: 3.4, cap: "<span class='who'>Rochelle:</span> &ldquo;Chilli dogs are on. Lights on. We&rsquo;re OPEN.&rdquo;" },
+  { dur: 3.6, cap: "The OPEN sign flickers&hellip; and something tears open inside the window." },
+  { dur: 3.2, cap: "<span class='who'>Kyle:</span> &ldquo;ROCHELLE!!&rdquo;" },
+  { dur: 3.6, cap: "Kyle doesn&rsquo;t think. He dives." },
+  { dur: 2.8, cap: "Somewhere&hellip; stuck in the 90s." }
+];
+function drawCover(img) {
+  const s = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+  const dw = img.naturalWidth * s, dh = img.naturalHeight * s;
+  ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+}
+function drawSheetFrame(img, f, cx, feetY, s, rot) {
+  const dw = f.w * s, dh = f.h * s;
+  ctx.save();
+  ctx.translate(cx, feetY);
+  ctx.rotate(rot || 0);
+  if (img.naturalWidth) ctx.drawImage(img, f.x, f.y, f.w, f.h, -dw / 2, -dh, dw, dh);
+  ctx.restore();
+}
+function startIntro() {
+  INTRO.beat = 0; INTRO.t = 0; INTRO.portalR = 0; INTRO.flash = 0;
+  INTRO.spin = 0; INTRO.suckT = 0; INTRO.kyleT = 0;
+  mode = 'intro';
+  document.body.classList.add('intro');
+  introLayer.classList.add('show');
+  captionEl.classList.add('show');
+  skipBtn.classList.add('show');
+  captionEl.innerHTML = BEATS[0].cap;
+}
+function finishIntro() {
+  mode = 'play';
+  document.body.classList.remove('intro');
+  introLayer.classList.remove('show');
+  captionEl.classList.remove('show');
+  skipBtn.classList.remove('show');
+  try { localStorage.setItem('heysup_intro', '1'); } catch (e) {}
+  toast('Find each other. \u{1F32A}\uFE0F');
+}
+function nextBeat() {
+  INTRO.beat++;
+  INTRO.t = 0;
+  if (INTRO.beat >= BEATS.length) { finishIntro(); return; }
+  captionEl.innerHTML = BEATS[INTRO.beat].cap;
+}
+function drawIntro(dt) {
+  INTRO.t += dt;
+  INTRO.spin += dt * 4;
+  const b = INTRO.beat, bt = INTRO.t;
+  if (bt >= BEATS[b].dur) { nextBeat(); return; }
+
+  if (standImg.naturalWidth) drawCover(standImg);
+  else { ctx.fillStyle = '#0b0b18'; ctx.fillRect(0, 0, W, H); }
+  if (b === 0) { ctx.fillStyle = 'rgba(2,2,16,0.55)'; ctx.fillRect(0, 0, W, H); }
+
+  const wx = W * WX, wy = H * WY, gy = H * 0.86;
+
+  // window light (flickers when the portal opens)
+  if (b >= 1) {
+    let a = 0.55;
+    if (b === 2) a = 0.22 + 0.4 * Math.abs(Math.sin(INTRO.t * 16));
+    const g = ctx.createRadialGradient(wx, wy, 10, wx, wy, 230);
+    g.addColorStop(0, 'rgba(255,210,120,' + a.toFixed(2) + ')');
+    g.addColorStop(1, 'rgba(255,210,120,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(wx - 230, wy - 230, 460, 460);
+  }
+
+  // portal
+  const targetR = b >= 2 ? 64 : 0;
+  INTRO.portalR += (targetR - INTRO.portalR) * Math.min(1, dt * 2.5);
+  if (INTRO.portalR > 1) {
+    ctx.save();
+    ctx.translate(wx, wy);
+    const cols = ['#b565ff', '#4ecdc4', '#ff5fa2'];
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.strokeStyle = cols[i];
+      ctx.lineWidth = 7 - i * 1.5;
+      const r = Math.max(INTRO.portalR - i * 13, 4);
+      const a0 = INTRO.spin * (1 + i * 0.35) + i * 2.1;
+      ctx.arc(0, 0, r, a0, a0 + Math.PI * 1.4);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Rochelle at the window, then sucked in
+  if (b >= 1) {
+    const f = SHEETS.her.idle[0];
+    let rx = wx, ry = gy - 105, s = 0.62, rot = 0;
+    if (b >= 3) {
+      INTRO.suckT += dt;
+      const p = Math.min(1, INTRO.suckT / 1.8);
+      const e = p * p;
+      ry = (gy - 105) + (wy - (gy - 105)) * e;
+      s = 0.62 * (1 - e * 0.93);
+      rot = e * 9;
+    }
+    drawSheetFrame(SHEETS.her.img, f, rx, ry, s, rot);
+  }
+
+  // Kyle runs in and dives
+  if (b >= 4) {
+    INTRO.kyleT += dt;
+    const frames = SHEETS.him.walk;
+    const f = frames[Math.floor(INTRO.kyleT * 10) % frames.length];
+    const runDur = 1.1, diveDur = 0.9;
+    let kx, ky, rot = 0, s = 0.62;
+    if (INTRO.kyleT < runDur) {
+      const p = INTRO.kyleT / runDur;
+      kx = (W + 120) + ((wx + 190) - (W + 120)) * p;
+      ky = gy - 105;
+    } else if (INTRO.kyleT < runDur + diveDur) {
+      const p = (INTRO.kyleT - runDur) / diveDur;
+      const x0 = wx + 190, y0 = gy - 105;
+      kx = x0 + (wx - x0) * p;
+      ky = y0 + (wy - y0) * p - Math.sin(p * Math.PI) * 60;
+      rot = -p * 1.4;
+      s = 0.62 * (1 - p * 0.55);
+    } else { kx = wx; ky = wy; s = 0.04; }
+    drawSheetFrame(SHEETS.him.img, f, kx, ky, s, rot);
+  }
+
+  // white flash into the 90s
+  if (b === 5) INTRO.flash = Math.min(1, bt / BEATS[5].dur * 1.25);
+  if (INTRO.flash > 0) {
+    ctx.fillStyle = 'rgba(255,255,255,' + INTRO.flash.toFixed(2) + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+introLayer.addEventListener('click', () => { if (mode === 'intro') nextBeat(); });
+skipBtn.addEventListener('click', e => { e.stopPropagation(); finishIntro(); });
+document.getElementById('introBtn').addEventListener('click', startIntro);
+
 // character swap
 document.getElementById('swapBtn').addEventListener('click', () => {
   char = char === 'him' ? 'her' : 'him';
@@ -500,6 +665,8 @@ function frame(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
 
+  if (mode === 'intro') { drawIntro(dt); requestAnimationFrame(frame); return; }
+
   const left = keys['ArrowLeft'] || keys['a'] || keys['A'] || touchLeft || (mouseDown && mouseDir === 'left');
   const right = keys['ArrowRight'] || keys['d'] || keys['D'] || touchRight || (mouseDown && mouseDir === 'right');
   player.moving = left !== right;
@@ -552,6 +719,9 @@ function frame(now) {
 
   requestAnimationFrame(frame);
 }
+let seenIntro = false;
+try { seenIntro = !!localStorage.getItem('heysup_intro'); } catch (e) {}
+if (!seenIntro) startIntro();
 requestAnimationFrame(frame);
 </script>
 </body>
