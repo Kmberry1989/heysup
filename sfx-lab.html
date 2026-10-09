@@ -18,12 +18,15 @@
   button:active { transform:scale(.96); background:#2e2e4a; }
   button small { display:block; font-size:11px; font-weight:400; color:#bdbde0; margin-top:4px; }
   .cur { outline:2px dashed #5fd97a; outline-offset:-6px; }
+  .opt { flex:1; display:flex; gap:4px; }
+  .opt button:first-child { flex:1; }
+  .copy { flex:0 0 auto !important; padding:14px 10px !important; font-size:15px !important; }
 </style>
 </head>
 <body>
 <h1>🔊 SFX Lab</h1>
 <p class="hint">Tap each variant to hear it. Variant <b>A</b> (green outline) is what's in the game now.
-Tell me your picks like <b>"portal B, whoosh C, win A"</b> and I'll wire them in.</p>
+Tap a letter to <b>play</b> it, tap <b>📋</b> to <b>copy</b> that pick, then paste them to me like <b>"portal B, whoosh C"</b> and I'll wire them in.</p>
 <div id="lab"></div>
 <script>
 let AC = null, noiseBuf = null;
@@ -108,13 +111,21 @@ for (const [name, sfx] of Object.entries(SFX)) {
   const notes = { click: 'short + clicky', whoosh: 'airy sweep', dive: 'falling pitch', pop: 'bright blip',
     portal: 'big + eerie', lever: 'mechanical clunk', shimmer: 'sparkly', win: 'happy arp', lose: 'sad slide', step: 'soft thud' };
   let btns = '';
-  for (const [v, fn] of Object.entries(sfx.v))
-    btns += `<button data-sfx="${name}" data-v="${v}" class="${v === 'A' ? 'cur' : ''}">${v}<small>${notes[name]}</small></button>`;
+  for (const [v] of Object.entries(sfx.v))
+    btns += `<div class="opt"><button data-sfx="${name}" data-v="${v}" class="${v === 'A' ? 'cur' : ''}">${v}<small>${notes[name]}</small></button><button class="copy" data-copy="${name} ${v}" title="Copy this pick">\uD83D\uDCCB</button></div>`;
   div.innerHTML = `<h2>${name}</h2><div class="desc">${sfx.desc}</div><div class="row">${btns}</div>`;
   lab.appendChild(div);
 }
 lab.addEventListener('click', e => {
-  const b = e.target.closest('button');
+  const c = e.target.closest('.copy');
+  if (c) {
+    const done = () => { c.textContent = '\u2713'; setTimeout(() => c.textContent = '\uD83D\uDCCB', 1200); };
+    if (navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(c.dataset.copy).then(done).catch(done);
+    else done();
+    return;
+  }
+  const b = e.target.closest('button[data-sfx]');
   if (!b) return;
   SFX[b.dataset.sfx].v[b.dataset.v]();
 });
