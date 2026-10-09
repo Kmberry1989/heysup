@@ -97,7 +97,9 @@
     background:radial-gradient(ellipse at center, transparent 25%, rgba(5,5,12,.78) 100%); }
   #splash .gametitle { position:relative; font-size:clamp(44px,12vw,84px); font-weight:900; color:#ffd23f;
     text-shadow:3px 3px 0 #b565d8, 6px 6px 0 rgba(0,0,0,.45); letter-spacing:1px; }
-  #splash .tapstart { position:relative; color:#fff; font-size:18px; font-weight:800;
+  #splash .tapstart { position:absolute; left:0; right:0; text-align:center;
+    bottom:calc(30px + env(safe-area-inset-bottom, 0px)); }
+  #splash .tapstart span { display:inline-block; color:#fff; font-size:18px; font-weight:800;
     background:rgba(10,10,20,.65); border:2px solid #ffd23f; border-radius:999px; padding:10px 26px;
     animation:resumePulse 1.6s ease-in-out infinite; }
   /* pause */
@@ -224,7 +226,7 @@
   <div class="sshow" id="sshow"></div>
   <div class="shade"></div>
   <div class="gametitle">hey, sup?</div>
-  <div class="tapstart">▶ tap to start</div>
+  <div class="tapstart"><span>▶ tap to start</span></div>
 </div>
 <div id="menu">
   <div class="menu-kicker">a 90s retro adventure</div>
@@ -538,7 +540,7 @@ squirmyEl.addEventListener('click', () => {
 // ---- splash screen ----
 const splash = document.getElementById('splash');
 const sshow = document.getElementById('sshow');
-['game-assets/moment-1.webp', 'game-assets/moment-2.webp', 'game-assets/moment-3.webp'].forEach((src, i) => {
+['game-assets/moment-nature.webp', 'game-assets/moment-2.webp', 'game-assets/moment-3.webp'].forEach((src, i) => {
   const img = new Image();
   img.src = src;
   if (i === 0) img.classList.add('on');
