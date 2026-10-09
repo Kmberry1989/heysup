@@ -90,7 +90,7 @@
     transition:opacity .5s ease; overflow:hidden; }
   #splash.hide { opacity:0; pointer-events:none; }
   #splash .sshow { position:absolute; inset:0; }
-  #splash .sshow .cell { position:absolute; inset:0; opacity:0; transition:opacity 1.4s ease;
+  #splash .sshow .cell { position:absolute; inset:0; opacity:0; transition:opacity 2.8s ease;
     overflow:hidden; background:#000; }
   #splash .sshow .cell.on { opacity:.95; }
   #splash .sshow .cell img.bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
@@ -108,7 +108,7 @@
     border-radius:20px 20px 20px 6px; transform-origin:bottom left; }
   #splash .bub.right { align-self:flex-end; background:#0a84ff; color:#fff;
     border-radius:20px 20px 6px 20px; transform-origin:bottom right; }
-  #splash .bub.show { animation:msgIn .45s cubic-bezier(.2,1.35,.4,1) forwards; }
+  #splash .bub.show { animation:msgIn .9s cubic-bezier(.2,1.2,.4,1) forwards; }
   @keyframes msgIn { from { opacity:0; transform:translateY(16px) scale(.85); }
     to { opacity:1; transform:none; } }
   #splash .bub.typing { display:flex; gap:6px; padding:15px 18px; align-items:center; }
@@ -661,7 +661,7 @@ setInterval(() => {
   imgs[splashIdx].classList.remove('on');
   splashIdx = (splashIdx + 1) % imgs.length;
   imgs[splashIdx].classList.add('on');
-}, 3200);
+}, 5600);
 // ---- splash chat teaser: blank, then the conversation types itself in ----
 const splashChat = document.getElementById('splashChat');
 const chatTimers = [];
@@ -684,14 +684,29 @@ function chatSay(side, text) {
   splashChat.appendChild(b);
   requestAnimationFrame(() => b.classList.add('show'));
 }
-chatLater(1000, () => {
-  const t = chatTyping('left');
-  chatLater(800, () => { t.remove(); chatSay('left', 'hey, sup?'); });
-});
-chatLater(3600, () => {
-  const t = chatTyping('right');
-  chatLater(800, () => { t.remove(); chatSay('right', 'not much, you?'); });
-});
+const chatScript = [
+  ['typing', 'left'], ['say', 'left', 'hey, sup?'],
+  ['typing', 'right'], ['say', 'right', 'not much, you?'],
+  ['typing', 'left'], ['say', 'left', 'wanna do something fun tonight?'],
+  ['typing', 'right'], ['say', 'right', "always. what'd you have in mind? :)"],
+  ['typing', 'left'], ['say', 'left', "meet me out back. it's opening night!!"],
+  ['typing', 'right'], ['say', 'right', 'omw!!'],
+];
+let chatAt = 1200, curTyping = null;
+for (const step of chatScript) {
+  const at = chatAt, kind = step[0], side = step[1];
+  if (kind === 'typing') {
+    chatLater(at, () => { curTyping = chatTyping(side); });
+    chatAt += 1400;
+  } else {
+    const text = step[2];
+    chatLater(at, () => {
+      if (curTyping) { curTyping.remove(); curTyping = null; }
+      chatSay(side, text);
+    });
+    chatAt += 2000;
+  }
+}
 splash.addEventListener('click', () => {
   chatTimers.forEach(clearTimeout);
   AudioSys.init();
