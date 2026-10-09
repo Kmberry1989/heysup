@@ -306,6 +306,11 @@ const diveHimImg = new Image(); diveHimImg.src = 'game-assets/dive-him.png';
 const diveHerImg = new Image(); diveHerImg.src = 'game-assets/dive-her.png';
 const reachHimImg = new Image(); reachHimImg.src = 'game-assets/reach-him.png';
 const reachHerImg = new Image(); reachHerImg.src = 'game-assets/reach-her.png';
+const portraitHimImg = new Image(); portraitHimImg.src = 'game-assets/portrait-him.webp';
+const portraitHerImg = new Image(); portraitHerImg.src = 'game-assets/portrait-her.webp';
+const stillDustHimImg = new Image(); stillDustHimImg.src = 'game-assets/still-dust-him.webp';
+const stillDustHerImg = new Image(); stillDustHerImg.src = 'game-assets/still-dust-her.webp';
+const stillLeverImg = new Image(); stillLeverImg.src = 'game-assets/still-lever.webp';
 const portalImgs = [1, 2, 3, 4].map(n => { const im = new Image(); im.src = 'game-assets/portal-' + n + '.webp'; return im; });
 const himImg = new Image(); himImg.src = 'game-assets/him.png';
 const herImg = new Image(); herImg.src = 'game-assets/her.png';
@@ -313,11 +318,11 @@ SHEETS.him.img = himImg; SHEETS.her.img = herImg;
 const SCENE_IMG = { street: streetImg, arcade: arcadeImg, mall: mallImg };
 const SCENE_BG = { street: '#7ec8f7', arcade: '#2a1a3e', mall: '#3e2a1a' };
 
-const player = { x: 400, dir: 1, moving: false, animT: 0, heightPx: 200 };
+const player = { x: 400, vx: 0, dir: 1, moving: false, animT: 0, heightPx: 200 };
 let char = 'him';
 let scene = 'street';
 let enteredFrom = null; // which street door we used
-const SPEED = 300;
+const SPEED = 300, ACCEL = 1500;
 const keys = {};
 let touchLeft = false, touchRight = false;
 
@@ -455,6 +460,9 @@ function buildBeats() {
   const victimName = heroIsHim ? 'Rochelle' : 'Kyle';
   const heroPro = heroIsHim ? 'He' : 'She';
   return [
+    { dur: 3.4, cap: "Inside the stand &mdash; shaking off the dust." },
+    { dur: 3.4, cap: "Every shelf. Every surface. Tonight&rsquo;s the night." },
+    { dur: 4.2, cap: "One lever. Two hands." },
     { dur: 3.2, cap: "Kokomo. Friday night. They crank open the back bathroom window for business." },
     { dur: 4.4, cap: "<span class='who'>" + victimName + ":</span> &ldquo;Chili dogs are on.&rdquo; <span class='who'>" + heroName + ":</span> &ldquo;Lights on &mdash; we&rsquo;re OPEN.&rdquo;" },
     { dur: 3.0, cap: "The OPEN sign flickers&hellip; and the night tears open." },
@@ -466,6 +474,13 @@ function buildBeats() {
 let BEATS = buildBeats();
 function drawCover(img) {
   const s = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+  const dw = img.naturalWidth * s, dh = img.naturalHeight * s;
+  ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+}
+function drawStill(img, t, dur) { // graphic-novel still with a slow Ken Burns drift
+  if (!img.naturalWidth) { ctx.fillStyle = '#0b0b18'; ctx.fillRect(0, 0, W, H); return; }
+  const zb = 1.04 + 0.07 * Math.min(1, t / dur);
+  const s = Math.max(W / img.naturalWidth, H / img.naturalHeight) * zb;
   const dw = img.naturalWidth * s, dh = img.naturalHeight * s;
   ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
 }
@@ -538,10 +553,11 @@ function nextBeat() {
   INTRO.t = 0;
   if (INTRO.beat >= BEATS.length) { finishIntro(); return; }
   captionEl.innerHTML = BEATS[INTRO.beat].cap;
-  if (INTRO.beat === 2) AudioSys.sfx('portal');
-  if (INTRO.beat === 3) AudioSys.sfx('whoosh');
-  if (INTRO.beat === 4) AudioSys.sfx('dive');
-  if (INTRO.beat === 5) AudioSys.sfx('shimmer');
+  if (INTRO.beat === 2) AudioSys.sfx('lever');
+  if (INTRO.beat === 5) AudioSys.sfx('portal');
+  if (INTRO.beat === 6) AudioSys.sfx('whoosh');
+  if (INTRO.beat === 7) AudioSys.sfx('dive');
+  if (INTRO.beat === 8) AudioSys.sfx('shimmer');
 }
 function drawIntro(dt) {
   INTRO.t += dt;
@@ -549,16 +565,34 @@ function drawIntro(dt) {
   const b = INTRO.beat, bt = INTRO.t;
   if (bt >= BEATS[b].dur) { nextBeat(); return; }
 
-  if (standImg.naturalWidth) drawCover(standImg);
-  else { ctx.fillStyle = '#0b0b18'; ctx.fillRect(0, 0, W, H); }
-  if (b === 0) { ctx.fillStyle = 'rgba(2,2,16,0.55)'; ctx.fillRect(0, 0, W, H); }
+  if (b <= 2) {
+    // graphic-novel stills: dusting, dusting, then both hands on the lever
+    const simg = [stillDustHimImg, stillDustHerImg, stillLeverImg][b];
+    drawStill(simg, bt, BEATS[b].dur);
+    ctx.strokeStyle = 'rgba(255,255,255,.8)';
+    ctx.lineWidth = 5;
+    ctx.strokeRect(10, 10, W - 20, H - 20);
+    if (b === 2) {
+      // the lights flare on as the lever is pulled
+      const la = Math.min(1, Math.max(0, (bt - 0.9) / 2.2));
+      const lg = ctx.createRadialGradient(W / 2, H / 2, 40, W / 2, H / 2, Math.max(W, H) * 0.75);
+      lg.addColorStop(0, 'rgba(255,214,140,' + (0.7 * la).toFixed(2) + ')');
+      lg.addColorStop(1, 'rgba(255,214,140,0)');
+      ctx.fillStyle = lg;
+      ctx.fillRect(0, 0, W, H);
+    }
+  } else {
+    if (standImg.naturalWidth) drawCover(standImg);
+    else { ctx.fillStyle = '#0b0b18'; ctx.fillRect(0, 0, W, H); }
+    if (b === 3) { ctx.fillStyle = 'rgba(2,2,16,0.55)'; ctx.fillRect(0, 0, W, H); }
+  }
 
   const wx = W * WX, wy = H * WY, gy = H * 0.86;
 
   // window light (flickers when the portal opens)
-  if (b >= 1) {
+  if (b >= 4) {
     let a = 0.55;
-    if (b === 2) a = 0.22 + 0.4 * Math.abs(Math.sin(INTRO.t * 16));
+    if (b === 5) a = 0.22 + 0.4 * Math.abs(Math.sin(INTRO.t * 16));
     const g = ctx.createRadialGradient(wx, wy, 10, wx, wy, 230);
     g.addColorStop(0, 'rgba(255,210,120,' + a.toFixed(2) + ')');
     g.addColorStop(1, 'rgba(255,210,120,0)');
@@ -568,8 +602,8 @@ function drawIntro(dt) {
 
   // portal: blobby vortex sprite, additive glow — closes as the hero dives
   let targetR = 0;
-  if (b === 2 || b === 3) targetR = 64;
-  else if (b === 4) targetR = Math.max(0, 64 * (1 - INTRO.kyleT / 2.1));
+  if (b === 5 || b === 6) targetR = 64;
+  else if (b === 7) targetR = Math.max(0, 64 * (1 - INTRO.kyleT / 2.1));
   INTRO.portalR += (targetR - INTRO.portalR) * Math.min(1, dt * 2.5);
   if (INTRO.portalR > 1 && portalImgs[0].naturalWidth) {
     const fr = portalImgs[Math.floor(INTRO.t * 8) % portalImgs.length];
@@ -582,20 +616,20 @@ function drawIntro(dt) {
     ctx.restore();
   }
 
-  // beats 1-2: both at the window, satisfied — leaning in for a kiss,
+  // beats 4-5: both at the window, satisfied — leaning in for a kiss,
   // then recoiling to opposite sides as the portal tears open
-  if (b === 1 || b === 2) {
-    const rise = b === 1 ? Math.min(1, bt / 0.8) : 1;
-    const lean = b === 1 ? 0.05 + 0.13 * Math.min(1, bt / 3) : 0;
-    const rec = b === 2 ? 1 - Math.pow(1 - Math.min(1, bt / 0.5), 2) : 0;
-    const hop = b === 2 ? -Math.sin(Math.min(1, bt / 0.5) * Math.PI) * 34 : 0;
-    const tremble = b === 2 && bt > 0.5 ? Math.sin(bt * 30) * 2 : 0;
-    const bob = b === 1 ? Math.sin(bt * 2.2) * 4 : 0;
+  if (b === 4 || b === 5) {
+    const rise = b === 4 ? Math.min(1, bt / 0.8) : 1;
+    const lean = b === 4 ? 0.05 + 0.13 * Math.min(1, bt / 3) : 0;
+    const rec = b === 5 ? 1 - Math.pow(1 - Math.min(1, bt / 0.5), 2) : 0;
+    const hop = b === 5 ? -Math.sin(Math.min(1, bt / 0.5) * Math.PI) * 34 : 0;
+    const tremble = b === 5 && bt > 0.5 ? Math.sin(bt * 30) * 2 : 0;
+    const bob = b === 4 ? Math.sin(bt * 2.2) * 4 : 0;
     const yOff = (1 - rise) * 70;
     const fV = INTRO.vSheet.idle[0], fH = INTRO.hSheet.idle[0];
     drawSheetFrame(INTRO.vSheet.img, fV, wx - 78 + lean * 40 - 112 * rec, gy - 105 + yOff + bob + hop, 0.62, lean);
     drawSheetFrame(INTRO.hSheet.img, fH, wx + 78 - lean * 40 + 112 * rec + tremble, gy - 105 + yOff - bob + hop, 0.62, -lean);
-    if (b === 1 && bt > 1.4) {
+    if (b === 4 && bt > 1.4) {
       for (let i = 0; i < 3; i++) {
         const hp = (bt - 1.4 - i * 0.55) / 1.7;
         if (hp > 0 && hp < 1) {
@@ -610,8 +644,8 @@ function drawIntro(dt) {
     }
   }
 
-  // beat 3: the victim is wisped up by the vortex; the hero reaches out in shock
-  if (b === 3) {
+  // beat 6: the victim is wisped up by the vortex; the hero reaches out in shock
+  if (b === 6) {
     INTRO.suckT += dt;
     const p = Math.min(1, INTRO.suckT / 2.4);
     const ang = p * Math.PI * 5;
@@ -660,8 +694,8 @@ function drawIntro(dt) {
     ctx.restore();
   } else if (INTRO.leaves.length) INTRO.leaves.length = 0;
 
-  // beat 4: the hero runs and dives in
-  if (b === 4) {
+  // beat 7: the hero runs and dives in
+  if (b === 7) {
     INTRO.kyleT += dt;
     const frames = INTRO.hSheet.walk;
     const runDur = 0.9, diveDur = 0.9;
@@ -681,7 +715,7 @@ function drawIntro(dt) {
   }
 
   // white flash into the 90s
-  if (b === 5) INTRO.flash = Math.min(1, bt / BEATS[5].dur * 1.25);
+  if (b === 8) INTRO.flash = Math.min(1, bt / BEATS[8].dur * 1.25);
   if (INTRO.flash > 0) {
     ctx.fillStyle = 'rgba(255,255,255,' + INTRO.flash.toFixed(2) + ')';
     ctx.fillRect(0, 0, W, H);
@@ -701,9 +735,9 @@ const menuDuo = [
   { sk: 'her', x: 380, dir: -1, moving: true, animT: 0.5 }
 ];
 function drawMenu(dt) {
-  if (!menuAnim.portraits && himImg.naturalWidth && herImg.naturalWidth) {
-    drawPortrait('portHim', SHEETS.him);
-    drawPortrait('portHer', SHEETS.her);
+  if (!menuAnim.portraits && portraitHimImg.naturalWidth && portraitHerImg.naturalWidth) {
+    drawCardPortrait('portHim', portraitHimImg);
+    drawCardPortrait('portHer', portraitHerImg);
     menuAnim.portraits = true;
   }
   const Mw = menuCanvas.width, Mh = menuCanvas.height;
@@ -748,13 +782,12 @@ muteBtn.addEventListener('click', () => {
 });
 
 // ---- character select: your pick is the hero who dives ----
-function drawPortrait(canvasId, sheet) {
+function drawCardPortrait(canvasId, img) {
   const c = document.getElementById(canvasId), x = c.getContext('2d');
-  const f = sheet.idle[0];
-  const s = Math.min(c.width / f.w, c.height / f.h) * 0.95;
-  const dw = f.w * s, dh = f.h * s;
+  const s = Math.max(c.width / img.naturalWidth, c.height / img.naturalHeight);
+  const dw = img.naturalWidth * s, dh = img.naturalHeight * s;
   x.clearRect(0, 0, c.width, c.height);
-  if (sheet.img.naturalWidth) x.drawImage(sheet.img, f.x, f.y, f.w, f.h, (c.width - dw) / 2, (c.height - dh) / 2, dw, dh);
+  x.drawImage(img, (c.width - dw) / 2, (c.height - dh) / 2, dw, dh);
 }
 function selectChar(c) {
   char = c;
@@ -843,6 +876,7 @@ const AudioSys = {
       case 'pop': this.tone(520, 0.12, 'sine', 0.14, 940); break;
       case 'flag': this.tone(420, 0.07, 'square', 0.1); break;
       case 'portal': this.tone(70, 1.2, 'sawtooth', 0.12, 320); this.tone(140, 1.2, 'triangle', 0.08, 640); break;
+      case 'lever': this.tone(130, 0.18, 'square', 0.12, 55); this.tone(660, 0.5, 'sine', 0.06, 1320); break;
       case 'shimmer': [880, 1174, 1568].forEach((f, i) => this.tone(f, 0.25, 'sine', 0.08, null, i * 0.12)); break;
       case 'win': [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.16, 'square', 0.1, null, i * 0.1)); break;
       case 'lose': this.tone(300, 0.5, 'sawtooth', 0.12, 90); break;
@@ -1107,11 +1141,17 @@ function frame(now) {
 
   const left = keys['ArrowLeft'] || keys['a'] || keys['A'] || touchLeft || (mouseDown && mouseDir === 'left');
   const right = keys['ArrowRight'] || keys['d'] || keys['D'] || touchRight || (mouseDown && mouseDir === 'right');
-  player.moving = left !== right;
+  const driving = left !== right;
+  if (driving) player.dir = right ? 1 : -1;
+  // simple acceleration toward the target velocity
+  const targetV = driving ? player.dir * SPEED : 0;
+  const rate = (driving ? ACCEL : ACCEL * 1.6) * dt;
+  const dv = targetV - player.vx;
+  player.vx += Math.max(-rate, Math.min(rate, dv));
+  player.x += player.vx * dt;
+  player.moving = Math.abs(player.vx) > 24;
   if (player.moving) {
-    player.dir = right ? 1 : -1;
-    player.x += player.dir * SPEED * dt;
-    player.animT += dt;
+    player.animT += dt * (0.35 + 0.65 * Math.min(1, Math.abs(player.vx) / SPEED));
     player.stepT = (player.stepT || 0) + dt;
     if (player.stepT >= 0.3) { // rhythmic steps while held down
       player.stepT = 0;
