@@ -101,7 +101,9 @@
   #splash .shade { position:absolute; inset:0;
     background:radial-gradient(ellipse at center, transparent 25%, rgba(5,5,12,.78) 100%); }
   #splash .chat { position:absolute; top:calc(20px + env(safe-area-inset-top, 0px)); left:16px; right:16px;
-    display:flex; flex-direction:column; gap:10px; pointer-events:none; }
+    display:flex; flex-direction:column; gap:10px; pointer-events:none;
+    transform-origin:top left; transition:transform 4.5s ease; }
+  #splash .chat.mini { transform:scale(.6); }
   #splash .bub { max-width:74%; padding:10px 17px; font-size:clamp(17px,4.6vw,24px); font-weight:700;
     line-height:1.3; opacity:0; box-shadow:0 3px 14px rgba(0,0,0,.35); }
   #splash .bub.left { align-self:flex-start; background:#f2f2f7; color:#000;
@@ -707,6 +709,8 @@ for (const step of chatScript) {
     chatAt += 2000;
   }
 }
+// after the conversation plays out, shrink the thread so the photos show through
+chatLater(chatAt + 2500, () => splashChat.classList.add('mini'));
 splash.addEventListener('click', () => {
   chatTimers.forEach(clearTimeout);
   AudioSys.init();
