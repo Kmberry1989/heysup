@@ -260,6 +260,9 @@ const fallHimImg = new Image(); fallHimImg.src = 'game-assets/fall-him.png';
 const fallHerImg = new Image(); fallHerImg.src = 'game-assets/fall-her.png';
 const diveHimImg = new Image(); diveHimImg.src = 'game-assets/dive-him.png';
 const diveHerImg = new Image(); diveHerImg.src = 'game-assets/dive-her.png';
+const reachHimImg = new Image(); reachHimImg.src = 'game-assets/reach-him.png';
+const reachHerImg = new Image(); reachHerImg.src = 'game-assets/reach-her.png';
+const portalImgs = [1, 2, 3, 4].map(n => { const im = new Image(); im.src = 'game-assets/portal-' + n + '.webp'; return im; });
 const himImg = new Image(); himImg.src = 'game-assets/him.png';
 const herImg = new Image(); herImg.src = 'game-assets/her.png';
 SHEETS.him.img = himImg; SHEETS.her.img = herImg;
@@ -408,11 +411,11 @@ function buildBeats() {
   const victimName = heroIsHim ? 'Rochelle' : 'Kyle';
   const heroPro = heroIsHim ? 'He' : 'She';
   return [
-    { dur: 3.6, cap: "Kokomo. Friday night. They just cranked open the back bathroom window for business." },
-    { dur: 3.4, cap: "<span class='who'>" + victimName + ":</span> &ldquo;Chili dogs are on. Lights on. We&rsquo;re OPEN.&rdquo;" },
-    { dur: 3.6, cap: "The OPEN sign flickers&hellip; and something tears open inside the window." },
-    { dur: 3.2, cap: "<span class='who'>" + heroName + ":</span> &ldquo;" + victimName.toUpperCase() + "!!&rdquo;" },
-    { dur: 3.6, cap: heroName + " doesn&rsquo;t think. " + heroPro + " dives." },
+    { dur: 3.2, cap: "Kokomo. Friday night. They crank open the back bathroom window for business." },
+    { dur: 4.4, cap: "<span class='who'>" + victimName + ":</span> &ldquo;Chili dogs are on.&rdquo; <span class='who'>" + heroName + ":</span> &ldquo;Lights on &mdash; we&rsquo;re OPEN.&rdquo;" },
+    { dur: 3.0, cap: "The OPEN sign flickers&hellip; and the night tears open." },
+    { dur: 4.2, cap: "<span class='who'>" + heroName + ":</span> &ldquo;" + victimName.toUpperCase() + "!!&rdquo;" },
+    { dur: 3.4, cap: heroName + " doesn&rsquo;t think. " + heroPro + " dives." },
     { dur: 2.8, cap: "BROKENSPORT&hellip; stuck in the 90s." }
   ];
 }
@@ -422,11 +425,15 @@ function drawCover(img) {
   const dw = img.naturalWidth * s, dh = img.naturalHeight * s;
   ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
 }
-function drawIntroSprite(img, cx, cy, h) {
+function drawIntroSprite(img, cx, cy, h, flip) {
   const iw = img.naturalWidth, ih = img.naturalHeight;
   if (!iw) return;
   const dw = h * iw / ih;
-  ctx.drawImage(img, cx - dw / 2, cy - h / 2, dw, h);
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(flip ? -1 : 1, 1);
+  ctx.drawImage(img, -dw / 2, -h / 2, dw, h);
+  ctx.restore();
 }
 function drawSheetFrame(img, f, cx, feetY, s, rot) {
   const dw = f.w * s, dh = f.h * s;
@@ -444,6 +451,8 @@ function startIntro() {
   INTRO.hSheet = SHEETS[char];
   INTRO.vFall = (char === 'him') ? fallHerImg : fallHimImg;
   INTRO.hDive = (char === 'him') ? diveHimImg : diveHerImg;
+  INTRO.hReach = (char === 'him') ? reachHimImg : reachHerImg;
+  INTRO.leaves = [];
   mode = 'intro';
   document.body.classList.add('intro');
   introLayer.classList.add('show');
@@ -471,6 +480,7 @@ function nextBeat() {
   if (INTRO.beat >= BEATS.length) { finishIntro(); return; }
   captionEl.innerHTML = BEATS[INTRO.beat].cap;
   if (INTRO.beat === 2) AudioSys.sfx('portal');
+  if (INTRO.beat === 3) AudioSys.sfx('whoosh');
   if (INTRO.beat === 4) AudioSys.sfx('dive');
   if (INTRO.beat === 5) AudioSys.sfx('shimmer');
 }
@@ -497,52 +507,108 @@ function drawIntro(dt) {
     ctx.fillRect(wx - 230, wy - 230, 460, 460);
   }
 
-  // portal
+  // portal: blobby vortex sprite, additive glow
   const targetR = b >= 2 ? 64 : 0;
   INTRO.portalR += (targetR - INTRO.portalR) * Math.min(1, dt * 2.5);
-  if (INTRO.portalR > 1) {
+  if (INTRO.portalR > 1 && portalImgs[0].naturalWidth) {
+    const fr = portalImgs[Math.floor(INTRO.t * 8) % portalImgs.length];
+    const pr = INTRO.portalR * 2.9 * (1 + 0.06 * Math.sin(INTRO.t * 6));
     ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
     ctx.translate(wx, wy);
-    const cols = ['#b565ff', '#4ecdc4', '#ff5fa2'];
-    for (let i = 0; i < 3; i++) {
-      ctx.beginPath();
-      ctx.strokeStyle = cols[i];
-      ctx.lineWidth = 7 - i * 1.5;
-      const r = Math.max(INTRO.portalR - i * 13, 4);
-      const a0 = INTRO.spin * (1 + i * 0.35) + i * 2.1;
-      ctx.arc(0, 0, r, a0, a0 + Math.PI * 1.4);
-      ctx.stroke();
-    }
+    ctx.rotate(Math.sin(INTRO.t * 1.3) * 0.15);
+    ctx.drawImage(fr, -pr, -pr, pr * 2, pr * 2);
     ctx.restore();
   }
 
-  // the victim at the window, then sucked in
-  if (b >= 1) {
-    if (b < 3) {
-      const f = INTRO.vSheet.idle[0];
-      drawSheetFrame(INTRO.vSheet.img, f, wx, gy - 105, 0.62, 0);
-    } else {
-      INTRO.suckT += dt;
-      const p = Math.min(1, INTRO.suckT / 1.8);
-      const e = p * p;
-      const ry = (gy - 105) + (wy - (gy - 105)) * e;
-      const s = 0.62 * (1 - e * 0.93);
-      if (s > 0.03 && INTRO.vFall.naturalWidth) drawIntroSprite(INTRO.vFall, wx, ry, 240 * s);
+  // beats 1-2: both at the window, satisfied — leaning in for a kiss
+  if (b === 1 || b === 2) {
+    const rise = b === 1 ? Math.min(1, bt / 0.8) : 1;
+    const lean = b === 1 ? 0.05 + 0.13 * Math.min(1, bt / 3) : 0;
+    const tremble = b === 2 ? Math.sin(bt * 30) * 2 : 0;
+    const bob = Math.sin(bt * 2.2) * 4;
+    const yOff = (1 - rise) * 70;
+    const fV = INTRO.vSheet.idle[0], fH = INTRO.hSheet.idle[0];
+    drawSheetFrame(INTRO.vSheet.img, fV, wx - 78 + lean * 40, gy - 105 + yOff + bob, 0.62, lean);
+    drawSheetFrame(INTRO.hSheet.img, fH, wx + 78 - lean * 40 + tremble, gy - 105 + yOff - bob, 0.62, -lean);
+    if (b === 1 && bt > 1.4) {
+      for (let i = 0; i < 3; i++) {
+        const hp = (bt - 1.4 - i * 0.55) / 1.7;
+        if (hp > 0 && hp < 1) {
+          ctx.save();
+          ctx.globalAlpha = (1 - hp) * 0.9;
+          ctx.font = '20px serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('\u2764', wx + (i - 1) * 16 - hp * 10, gy - 235 - hp * 75);
+          ctx.restore();
+        }
+      }
     }
   }
 
-  // the hero runs in and dives
-  if (b >= 4) {
+  // beat 3: the victim is wisped up by the vortex; the hero reaches out in shock
+  if (b === 3) {
+    INTRO.suckT += dt;
+    const p = Math.min(1, INTRO.suckT / 2.4);
+    const ang = p * Math.PI * 5;
+    const rad = 80 * (1 - p);
+    const sx = wx - 78, sy = gy - 105;
+    const rx = sx + (wx - sx) * p + Math.cos(ang) * rad;
+    const ry = sy + (wy - sy) * p - Math.sin(p * Math.PI) * 45;
+    const s = 0.62 * (1 - p * 0.9);
+    if (s > 0.03 && INTRO.vFall.naturalWidth) {
+      const iw = INTRO.vFall.naturalWidth, ih = INTRO.vFall.naturalHeight;
+      const dh = 240 * s, dw = dh * iw / ih;
+      ctx.save();
+      ctx.translate(rx, ry);
+      ctx.rotate(Math.sin(p * 14) * 0.12);
+      ctx.drawImage(INTRO.vFall, -dw / 2, -dh / 2, dw, dh);
+      ctx.restore();
+    }
+    if (INTRO.hReach.naturalWidth) drawIntroSprite(INTRO.hReach, wx + 115, gy - 105, 200, true);
+    // leaves caught in the gust
+    if (!INTRO.leaves.length) {
+      const cols = ['#e8912d', '#c93a2e', '#e8b93c', '#7a9e3f', '#d4691e'];
+      for (let i = 0; i < 26; i++) INTRO.leaves.push({
+        a: Math.random() * 6.283, r: 60 + Math.random() * 120,
+        sz: 5 + Math.random() * 7, col: cols[i % cols.length],
+        spin: Math.random() * 6.283, va: 1.6 + Math.random() * 2.6
+      });
+    }
+    for (const lf of INTRO.leaves) {
+      lf.a += dt * lf.va; lf.r = Math.max(24, lf.r - dt * 34); lf.spin += dt * 3;
+      ctx.save();
+      ctx.translate(wx + Math.cos(lf.a) * lf.r, wy + Math.sin(lf.a) * lf.r * 0.55 - 30);
+      ctx.rotate(lf.spin);
+      ctx.fillStyle = lf.col;
+      ctx.beginPath(); ctx.ellipse(0, 0, lf.sz, lf.sz * 0.55, 0, 0, 6.283); ctx.fill();
+      ctx.restore();
+    }
+    // air gust streaks
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 8; i++) {
+      const gr = 95 + i * 15;
+      const a0 = INTRO.spin * 1.6 + i * 0.85;
+      ctx.beginPath(); ctx.ellipse(wx, wy, gr, gr * 0.62, 0, a0, a0 + 1.15); ctx.stroke();
+    }
+    ctx.restore();
+  } else if (INTRO.leaves.length) INTRO.leaves.length = 0;
+
+  // beat 4: the hero runs and dives in
+  if (b === 4) {
     INTRO.kyleT += dt;
     const frames = INTRO.hSheet.walk;
-    const runDur = 1.1, diveDur = 0.9;
+    const runDur = 0.7, diveDur = 0.9;
+    const xStart = wx + 110;
     if (INTRO.kyleT < runDur) {
       const p = INTRO.kyleT / runDur;
-      const f = frames[Math.floor(INTRO.kyleT * 10) % frames.length];
-      drawSheetFrame(INTRO.hSheet.img, f, (W + 120) + ((wx + 190) - (W + 120)) * p, gy - 105, 0.62, 0);
+      const f = frames[Math.floor(INTRO.kyleT * 14) % frames.length];
+      drawSheetFrame(INTRO.hSheet.img, f, xStart + ((wx + 55) - xStart) * p, gy - 105, 0.62, 0);
     } else if (INTRO.kyleT < runDur + diveDur) {
       const p = (INTRO.kyleT - runDur) / diveDur;
-      const x0 = wx + 190, y0 = gy - 105;
+      const x0 = wx + 55, y0 = gy - 105;
       const kx = x0 + (wx - x0) * p;
       const ky = y0 + (wy - y0) * p - Math.sin(p * Math.PI) * 60;
       const s = 0.62 * (1 - p * 0.55);
@@ -657,20 +723,38 @@ document.getElementById('swapBtn').addEventListener('click', () => {
 
 // ---- procedural audio: all synthesized with Web Audio, no audio files ----
 const SONGS = {
-  menu:   { bpm: 112, root: 110, bass: [0,0,7,0,5,5,7,10], lead: [12,-1,15,-1,19,-1,15,12] },
-  street: { bpm: 120, root: 110, bass: [0,0,0,7,0,0,5,7],  lead: [-1,12,-1,15,-1,19,-1,15] },
-  arcade: { bpm: 136, root: 123, bass: [0,7,0,7,0,10,7,5], lead: [12,15,19,15,12,-1,10,12] },
-  mall:   { bpm: 100, root: 98,  bass: [0,0,5,5,7,7,5,3],  lead: [-1,-1,12,15,-1,17,15,12] }
+  menu:   { bpm: 80, root: 110, bassType: 'triangle', bassVol: 0.085, leadType: 'sine', leadVol: 0.05,
+            bass: [0,-1,-1,-1, 0,-1,-1,-1, 5,-1,-1,-1, 7,-1,5,-1],
+            lead: [12,-1,-1,-1, -1,-1,15,-1, -1,-1,-1,-1, 19,-1,15,-1],
+            kick: [], hat: [4, 12] },
+  street: { bpm: 88, root: 98, bassType: 'triangle', bassVol: 0.085, leadType: 'square', leadVol: 0.035,
+            bass: [0,-1,0,-1, 7,-1,0,-1, 5,-1,5,-1, 7,-1,3,-1],
+            lead: [-1,-1,12,-1, -1,-1,-1,-1, -1,15,-1,-1, -1,-1,17,-1],
+            kick: [0, 8], hat: [2, 6, 10, 14] },
+  arcade: { bpm: 112, root: 123, bassType: 'sawtooth', bassVol: 0.06, leadType: 'square', leadVol: 0.04,
+            bass: [0,0,7,0, 0,0,10,7, 0,0,7,0, 5,7,10,12],
+            lead: [12,-1,15,-1, 19,-1,15,-1, 12,-1,15,19, -1,15,-1,12],
+            kick: [0, 4, 8, 12], hat: [2, 6, 10, 14] },
+  mall:   { bpm: 72, root: 87, bassType: 'sine', bassVol: 0.09, leadType: 'sine', leadVol: 0.05,
+            bass: [0,-1,-1,-1, -1,-1,5,-1, -1,-1,-1,-1, 7,-1,5,-1],
+            lead: [-1,-1,12,-1, -1,-1,-1,-1, 15,-1,-1,17, -1,-1,15,-1],
+            kick: [], hat: [] }
 };
 function semi(root, st) { return root * Math.pow(2, st / 12); }
 const AudioSys = {
-  ctx: null, muted: false, musicInt: null, mStep: 0,
+  ctx: null, muted: false, musicInt: null, mStep: 0, noiseBuf: null,
   init() {
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (AC) { try { this.ctx = new AC(); } catch (e) {} }
     }
     if (this.ctx && this.ctx.state === 'suspended' && !this.muted) this.ctx.resume();
+    if (this.ctx && !this.noiseBuf) {
+      const len = Math.floor(this.ctx.sampleRate * 0.1);
+      this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+      const d = this.noiseBuf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    }
   },
   tone(freq, dur, type, vol, slideTo, delay) {
     if (!this.ctx || this.muted || paused) return;
@@ -702,6 +786,21 @@ const AudioSys = {
       case 'lose': this.tone(300, 0.5, 'sawtooth', 0.12, 90); break;
     }
   },
+  hat(vol) {
+    if (!this.ctx || !this.noiseBuf || this.muted || paused) return;
+    const t0 = this.ctx.currentTime;
+    const src = this.ctx.createBufferSource(); src.buffer = this.noiseBuf;
+    const f = this.ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 6000;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(vol || 0.045, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.04);
+    src.connect(f); f.connect(g); g.connect(this.ctx.destination);
+    src.start(t0); src.stop(t0 + 0.06);
+  },
+  kick(vol) {
+    if (!this.ctx || this.muted || paused) return;
+    this.tone(150, 0.14, 'sine', vol || 0.15, 40);
+  },
   startMusic(modeName) {
     const song = SONGS[modeName] || SONGS.street;
     this.mStep = 0;
@@ -709,10 +808,12 @@ const AudioSys = {
     const stepDur = 60 / song.bpm / 2 * 1000;
     this.musicInt = setInterval(() => {
       if (!this.ctx || this.muted || paused) return;
-      const i = this.mStep % 8;
+      const i = this.mStep % 16;
       const b = song.bass[i], l = song.lead[i];
-      if (b >= 0) this.tone(semi(song.root, b), 0.16, 'triangle', 0.085);
-      if (l >= 0) this.tone(semi(song.root * 2, l), 0.12, 'square', 0.04);
+      if (b >= 0) this.tone(semi(song.root, b), 0.22, song.bassType, song.bassVol);
+      if (l >= 0) this.tone(semi(song.root * 2, l), 0.18, song.leadType, song.leadVol);
+      if (song.kick.indexOf(i) >= 0) this.kick();
+      if (song.hat.indexOf(i) >= 0) this.hat();
       this.mStep++;
     }, stepDur);
   },
