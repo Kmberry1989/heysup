@@ -726,20 +726,23 @@ const SONGS = {
   menu:   { bpm: 80, root: 110, bassType: 'triangle', bassVol: 0.085, leadType: 'sine', leadVol: 0.05,
             bass: [0,-1,-1,-1, 0,-1,-1,-1, 5,-1,-1,-1, 7,-1,5,-1],
             lead: [12,-1,-1,-1, -1,-1,15,-1, -1,-1,-1,-1, 19,-1,15,-1],
-            kick: [], hat: [4, 12] },
+            kick: [], hat: [4, 12],
+            arp: [-1,-1,-1,-1, -1,-1,-1,-1, 12,16,19,24, 19,16,12,16], arpType: 'sine', arpVol: 0.04, arpOct: 4 },
   street: { bpm: 88, root: 98, bassType: 'triangle', bassVol: 0.085, leadType: 'square', leadVol: 0.035,
             bass: [0,-1,0,-1, 7,-1,0,-1, 5,-1,5,-1, 7,-1,3,-1],
             lead: [-1,-1,12,-1, -1,-1,-1,-1, -1,15,-1,-1, -1,-1,17,-1],
-            kick: [0, 8], hat: [2, 6, 10, 14] },
+            kick: [0, 8], hat: [2, 6, 10, 14],
+            arp: [-1,-1,-1,-1, -1,-1,-1,-1, 12,-1,15,17, -1,19,22,19], arpType: 'triangle', arpVol: 0.035, arpOct: 2 },
   arcade: { bpm: 112, root: 123, bassType: 'sawtooth', bassVol: 0.06, leadType: 'square', leadVol: 0.04,
             bass: [0,0,7,0, 0,0,10,7, 0,0,7,0, 5,7,10,12],
             lead: [12,-1,15,-1, 19,-1,15,-1, 12,-1,15,19, -1,15,-1,12],
-            kick: [0, 4, 8, 12], hat: [2, 6, 10, 14] },
+            kick: [0, 4, 8, 12], hat: [2, 6, 10, 14],
+            arp: [-1,-1,-1,-1, -1,-1,-1,-1, 12,15,19,24, 22,19,15,19], arpType: 'square', arpVol: 0.028, arpOct: 2 },
   mall:   { bpm: 72, root: 87, bassType: 'sine', bassVol: 0.09, leadType: 'sine', leadVol: 0.05,
             bass: [0,-1,-1,-1, -1,-1,5,-1, -1,-1,-1,-1, 7,-1,5,-1],
             lead: [-1,-1,12,-1, -1,-1,-1,-1, 15,-1,-1,17, -1,-1,15,-1],
-            kick: [], hat: [] }
-};
+            kick: [], hat: [],
+            arp: [-1,-1,-1,-1, -1,-1,-1,-1, 12,-1,16,19, -1,23,19,16], arpType: 'sine', arpVol: 0.04, arpOct: 4 } };
 function semi(root, st) { return root * Math.pow(2, st / 12); }
 const AudioSys = {
   ctx: null, muted: false, musicInt: null, mStep: 0, noiseBuf: null,
@@ -812,6 +815,8 @@ const AudioSys = {
       const b = song.bass[i], l = song.lead[i];
       if (b >= 0) this.tone(semi(song.root, b), 0.22, song.bassType, song.bassVol);
       if (l >= 0) this.tone(semi(song.root * 2, l), 0.18, song.leadType, song.leadVol);
+      const ar = song.arp[i];
+      if (ar >= 0) this.tone(semi(song.root * song.arpOct, ar), 0.14, song.arpType, song.arpVol);
       if (song.kick.indexOf(i) >= 0) this.kick();
       if (song.hat.indexOf(i) >= 0) this.hat();
       this.mStep++;
