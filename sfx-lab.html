@@ -98,11 +98,11 @@ const SFX = {
   lose: { desc: 'Minigame defeat', v: {
     A: () => tone(300, 0.5, 'sawtooth', 0.1, 90),
     B: () => tone(220, 0.7, 'sine', 0.14, 55),
-    C: () => [392, 370, 311].forEach((f, i) => tone(f, 0.25, 'triangle', 0.1, f * 0.94, i * 0.16)) } } },
+    C: () => [392, 370, 311].forEach((f, i) => tone(f, 0.25, 'triangle', 0.1, f * 0.94, i * 0.16)) } },
   step: { desc: 'Footsteps while moving', v: {
     A: () => tone(82, 0.09, 'sine', 0.11, 55),
     B: () => noise(0.06, 0.1, 900, 300),
-    C: () => tone(120, 0.07, 'triangle', 0.1, 70) } } },
+    C: () => tone(120, 0.07, 'triangle', 0.1, 70) } },
 };
 const lab = document.getElementById('lab');
 for (const [name, sfx] of Object.entries(SFX)) {

@@ -27,6 +27,12 @@
   .opt .tag { font-weight:800; color:#ffd23f; margin-right:8px; }
   .copy { flex:0 0 auto; padding:12px 14px; font-size:16px; border-radius:12px; cursor:pointer;
     border:2px solid #ffd23f; background:#23233a; color:#fff; }
+  .optd .dinput { flex:1; padding:12px; font-size:15px; border-radius:12px; border:2px dashed #3a3a5c;
+    background:#1b1b2c; color:#fff; }
+  .optd .dinput::placeholder { color:#8a8aa8; }
+  .optd.picked .dinput { border-color:#5fd97a; border-style:solid; }
+  .dprev { flex:0 0 auto; padding:12px 14px; font-size:15px; border-radius:12px; cursor:pointer;
+    border:2px solid #3a3a5c; background:#23233a; color:#fff; }
   #copyPicks { position:sticky; bottom:12px; width:100%; padding:16px; font-size:17px; font-weight:800;
     border-radius:14px; border:2px solid #5fd97a; background:#1d3a26; color:#fff; cursor:pointer; margin-top:16px; }
 </style>
@@ -34,7 +40,8 @@
 <body>
 <h1>💬 Dialogue Lab</h1>
 <p class="hint">Tap a line to <b>preview</b> it (bloom + mumbling voice, same as in-game).
-Tap <b>📋</b> to copy that pick, or tap lines to mark your picks and use <b>Copy my picks</b> at the bottom.</p>
+Tap <b>📋</b> to copy that pick, or tap lines to mark your picks and use <b>Copy my picks</b> at the bottom.
+<b>D</b> is yours — type any line, ▶ previews it, 📋 copies it.</p>
 <div id="preview"><span class="empty">tap a line to preview it here</span></div>
 <div id="lab"></div>
 <button id="copyPicks">📋 Copy my picks</button>
@@ -88,14 +95,14 @@ function previewLine(text) {
 }
 // ---- dialogue options ----
 const BEATS = [
-  { n: 0, ctx: 'Beat 0 — dusting the stand, slow night', opts: [
-    'Another slow night at the chili dog stand…',
-    'Closing time at the chili dog stand…',
-    'Just another quiet night in Kokomo…' ] },
-  { n: 1, ctx: 'Beat 1 — still dusting', opts: [
-    '…not a single customer since lunch.',
-    '…not one customer all day.',
-    '…dead all week.' ] },
+  { n: 0, ctx: 'Beat 0 — dusting the stand, grand opening night', opts: [
+    'Grand opening night at the chili dog stand…',
+    'Tonight\u2019s the night \u2014 grand opening!',
+    'Everything\u2019s ready. Tonight we open.' ] },
+  { n: 1, ctx: 'Beat 1 — still dusting, waiting on the first customers', opts: [
+    '…not a single customer yet.',
+    '…any minute now.',
+    '…come on, Kokomo.' ] },
   { n: 2, ctx: 'Beat 2 — both hands on the lever, lights flare', opts: [
     'Flip it together…',
     'Ready? …Now.',
@@ -132,16 +139,40 @@ BEATS.forEach(b => {
     const code = b.n + ABC[i];
     opts += `<div class="opt" data-code="${code}"><button class="line"><span class="tag">${ABC[i]}</span>${line}</button><button class="copy" data-copy="${code}" title="Copy this pick">📋</button></div>`;
   });
+  opts += `<div class="opt optd" data-code="${b.n}D"><input class="dinput" maxlength="140" placeholder="D — type your own line…"><button class="dprev" title="Preview your line">▶</button><button class="copy" data-code="${b.n}D" title="Copy this pick">📋</button></div>`;
   div.innerHTML = `<h2>Line ${b.n}</h2><div class="ctx">${b.ctx}</div>${opts}`;
   lab.appendChild(div);
 });
+function flashCopy(btn, text) {
+  const done = () => { btn.textContent = '✓'; setTimeout(() => btn.textContent = '📋', 1200); };
+  if (navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(text).then(done).catch(done);
+  else done();
+}
 lab.addEventListener('click', e => {
+  const dp = e.target.closest('.dprev');
+  if (dp) {
+    const opt = dp.closest('.opt');
+    const inp = opt.querySelector('.dinput');
+    const txt = inp.value.trim();
+    if (!txt) { inp.focus(); return; }
+    const beatDiv = opt.closest('.beat');
+    beatDiv.querySelectorAll('.opt').forEach(o => o.classList.remove('picked'));
+    opt.classList.add('picked');
+    picks[beatDiv.querySelector('h2').textContent.replace('Line ', '')] = opt.dataset.code + ': ' + txt;
+    previewLine(txt);
+    return;
+  }
   const c = e.target.closest('.copy');
   if (c) {
-    const done = () => { c.textContent = '✓'; setTimeout(() => c.textContent = '📋', 1200); };
-    if (navigator.clipboard && navigator.clipboard.writeText)
-      navigator.clipboard.writeText(c.dataset.copy).then(done).catch(done);
-    else done();
+    const opt = c.closest('.opt');
+    if (opt.classList.contains('optd')) {
+      const txt = opt.querySelector('.dinput').value.trim();
+      if (!txt) { opt.querySelector('.dinput').focus(); return; }
+      flashCopy(c, c.dataset.code + ': ' + txt);
+    } else {
+      flashCopy(c, c.dataset.copy);
+    }
     return;
   }
   const l = e.target.closest('.line');
@@ -152,6 +183,21 @@ lab.addEventListener('click', e => {
     opt.classList.add('picked');
     picks[beatDiv.querySelector('h2').textContent.replace('Line ', '')] = opt.dataset.code;
     previewLine(l.textContent.replace(/^[ABC]\s*/, ''));
+  }
+});
+lab.addEventListener('input', e => {
+  const inp = e.target.closest('.dinput');
+  if (!inp) return;
+  const opt = inp.closest('.opt');
+  const beatDiv = inp.closest('.beat');
+  const key = beatDiv.querySelector('h2').textContent.replace('Line ', '');
+  if (inp.value.trim()) {
+    beatDiv.querySelectorAll('.opt').forEach(o => o.classList.remove('picked'));
+    opt.classList.add('picked');
+    picks[key] = opt.dataset.code + ': ' + inp.value.trim();
+  } else if (opt.classList.contains('picked')) {
+    opt.classList.remove('picked');
+    delete picks[key];
   }
 });
 document.getElementById('copyPicks').addEventListener('click', function() {
