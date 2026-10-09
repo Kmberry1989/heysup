@@ -25,6 +25,21 @@
     border:2px solid #ffd23f; border-radius:999px; padding:10px 22px;
     font-size:15px; font-weight:700; cursor:pointer; white-space:nowrap; }
   #doorPrompt.show { display:block; }
+  /* onscreen touch controller (touch devices only) */
+  #dpad { position:fixed; left:12px; bottom:16px; z-index:7; display:none;
+    grid-template-columns:repeat(3,54px); grid-template-rows:repeat(3,54px); gap:4px; }
+  body.touch #dpad { display:grid; }
+  body.touch #dpad.hidden { display:none; }
+  #dpad button { border-radius:50%; border:2px solid rgba(255,255,255,.7);
+    background:rgba(10,10,20,.45); color:#fff; font-size:22px; touch-action:none; }
+  #dpad button.pressed { background:rgba(124,92,255,.8); }
+  #dpad .up { grid-column:2; grid-row:1; }
+  #dpad .left { grid-column:1; grid-row:2; }
+  #dpad .down { grid-column:2; grid-row:3; }
+  #dpad .right { grid-column:3; grid-row:2; }
+  body.touch #squirmy { bottom:196px; }
+  #dpadToggle { right:14px; bottom:152px; background:#2ec4b6; display:none; }
+  body.touch #dpadToggle { display:flex; }
   /* squirmy helper */
   #squirmy { position:fixed; left:12px; bottom:16px; z-index:6; display:none;
     align-items:flex-end; gap:8px; cursor:pointer; max-width:78vw; }
@@ -98,6 +113,13 @@
 </div>
 <button id="swapBtn" class="hudbtn" aria-label="Swap character">🔄</button>
 <button id="phoneBtn" class="hudbtn" aria-label="Open phone">📱</button>
+<button id="dpadToggle" class="hudbtn" aria-label="Toggle touch controller">🎮</button>
+<div id="dpad">
+  <button class="up" data-k="ArrowUp" aria-label="Up">▲</button>
+  <button class="left" data-k="ArrowLeft" aria-label="Left">◀</button>
+  <button class="down" data-k="ArrowDown" aria-label="Down">▼</button>
+  <button class="right" data-k="ArrowRight" aria-label="Right">▶</button>
+</div>
 <div id="doorPrompt"></div>
 <div id="squirmy"><img src="assets/squirmy.webp" alt="Squirmy"><div id="sqBubble"></div></div>
 <div id="phoneOverlay">
@@ -212,6 +234,36 @@ let mouseDown = false, mouseDir = null;
 canvas.addEventListener('mousedown', e => { mouseDown = true; mouseDir = touchDir(e); });
 window.addEventListener('mouseup', () => { mouseDown = false; mouseDir = null; });
 window.addEventListener('mousemove', e => { if (mouseDown) mouseDir = touchDir(e); });
+
+// onscreen touch controller (shows on touch devices)
+if (('ontouchstart' in window) || navigator.maxTouchPoints > 0) {
+  document.body.classList.add('touch');
+}
+const dpad = document.getElementById('dpad');
+dpad.querySelectorAll('button').forEach(btn => {
+  const k = btn.dataset.k;
+  const press = e => {
+    e.preventDefault();
+    keys[k] = true;
+    btn.classList.add('pressed');
+    if (k === 'ArrowUp') tryEnter();
+    if (k === 'ArrowDown') tryExit();
+  };
+  const release = e => {
+    if (e) e.preventDefault();
+    keys[k] = false;
+    btn.classList.remove('pressed');
+  };
+  btn.addEventListener('touchstart', press, {passive:false});
+  btn.addEventListener('touchend', release, {passive:false});
+  btn.addEventListener('touchcancel', release, {passive:false});
+  btn.addEventListener('mousedown', press);
+  btn.addEventListener('mouseup', release);
+  btn.addEventListener('mouseleave', () => release(null));
+});
+document.getElementById('dpadToggle').addEventListener('click', () => {
+  dpad.classList.toggle('hidden');
+});
 
 // scenes + doors
 function bgAspect(img) {
