@@ -255,7 +255,11 @@ resize();
 const streetImg = new Image(); streetImg.src = 'game-assets/street.webp';
 const arcadeImg = new Image(); arcadeImg.src = 'game-assets/arcade.webp';
 const mallImg = new Image(); mallImg.src = 'game-assets/mall.webp';
-const signImg = new Image(); signImg.src = 'game-assets/sign.webp';
+const signImg = new Image(); signImg.src = 'game-assets/sign.png';
+const fallHimImg = new Image(); fallHimImg.src = 'game-assets/fall-him.png';
+const fallHerImg = new Image(); fallHerImg.src = 'game-assets/fall-her.png';
+const diveHimImg = new Image(); diveHimImg.src = 'game-assets/dive-him.png';
+const diveHerImg = new Image(); diveHerImg.src = 'game-assets/dive-her.png';
 const himImg = new Image(); himImg.src = 'game-assets/him.png';
 const herImg = new Image(); herImg.src = 'game-assets/her.png';
 SHEETS.him.img = himImg; SHEETS.her.img = herImg;
@@ -359,7 +363,7 @@ function tryEnter() {
     enteredFrom = d; scene = d; player.x = worldW() * 0.5; player.animT = 0;
     AudioSys.sfx('whoosh'); AudioSys.startMusic(d);
     if (d === 'arcade') squirmyTip('arcade', 'The arcade! Mullet Kart grudge matches go down here. Check the Events app on your phone!');
-    if (d === 'mall') squirmyTip('mall', 'The food court! Best chilli dogs in the bizarro 90s. Probably.');
+    if (d === 'mall') squirmyTip('mall', 'The food court! Best chili dogs in the bizarro 90s. Probably.');
   }
 }
 function tryExit() {
@@ -405,7 +409,7 @@ function buildBeats() {
   const heroPro = heroIsHim ? 'He' : 'She';
   return [
     { dur: 3.6, cap: "Kokomo. Friday night. They just cranked open the back bathroom window for business." },
-    { dur: 3.4, cap: "<span class='who'>" + victimName + ":</span> &ldquo;Chilli dogs are on. Lights on. We&rsquo;re OPEN.&rdquo;" },
+    { dur: 3.4, cap: "<span class='who'>" + victimName + ":</span> &ldquo;Chili dogs are on. Lights on. We&rsquo;re OPEN.&rdquo;" },
     { dur: 3.6, cap: "The OPEN sign flickers&hellip; and something tears open inside the window." },
     { dur: 3.2, cap: "<span class='who'>" + heroName + ":</span> &ldquo;" + victimName.toUpperCase() + "!!&rdquo;" },
     { dur: 3.6, cap: heroName + " doesn&rsquo;t think. " + heroPro + " dives." },
@@ -417,6 +421,12 @@ function drawCover(img) {
   const s = Math.max(W / img.naturalWidth, H / img.naturalHeight);
   const dw = img.naturalWidth * s, dh = img.naturalHeight * s;
   ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+}
+function drawIntroSprite(img, cx, cy, h) {
+  const iw = img.naturalWidth, ih = img.naturalHeight;
+  if (!iw) return;
+  const dw = h * iw / ih;
+  ctx.drawImage(img, cx - dw / 2, cy - h / 2, dw, h);
 }
 function drawSheetFrame(img, f, cx, feetY, s, rot) {
   const dw = f.w * s, dh = f.h * s;
@@ -432,6 +442,8 @@ function startIntro() {
   BEATS = buildBeats();
   INTRO.vSheet = (char === 'him') ? SHEETS.her : SHEETS.him;
   INTRO.hSheet = SHEETS[char];
+  INTRO.vFall = (char === 'him') ? fallHerImg : fallHimImg;
+  INTRO.hDive = (char === 'him') ? diveHimImg : diveHerImg;
   mode = 'intro';
   document.body.classList.add('intro');
   introLayer.classList.add('show');
@@ -506,39 +518,36 @@ function drawIntro(dt) {
 
   // the victim at the window, then sucked in
   if (b >= 1) {
-    const f = INTRO.vSheet.idle[0];
-    let rx = wx, ry = gy - 105, s = 0.62, rot = 0;
-    if (b >= 3) {
+    if (b < 3) {
+      const f = INTRO.vSheet.idle[0];
+      drawSheetFrame(INTRO.vSheet.img, f, wx, gy - 105, 0.62, 0);
+    } else {
       INTRO.suckT += dt;
       const p = Math.min(1, INTRO.suckT / 1.8);
       const e = p * p;
-      ry = (gy - 105) + (wy - (gy - 105)) * e;
-      s = 0.62 * (1 - e * 0.93);
-      rot = e * 9;
+      const ry = (gy - 105) + (wy - (gy - 105)) * e;
+      const s = 0.62 * (1 - e * 0.93);
+      if (s > 0.03 && INTRO.vFall.naturalWidth) drawIntroSprite(INTRO.vFall, wx, ry, 240 * s);
     }
-    drawSheetFrame(INTRO.vSheet.img, f, rx, ry, s, rot);
   }
 
   // the hero runs in and dives
   if (b >= 4) {
     INTRO.kyleT += dt;
     const frames = INTRO.hSheet.walk;
-    const f = frames[Math.floor(INTRO.kyleT * 10) % frames.length];
     const runDur = 1.1, diveDur = 0.9;
-    let kx, ky, rot = 0, s = 0.62;
     if (INTRO.kyleT < runDur) {
       const p = INTRO.kyleT / runDur;
-      kx = (W + 120) + ((wx + 190) - (W + 120)) * p;
-      ky = gy - 105;
+      const f = frames[Math.floor(INTRO.kyleT * 10) % frames.length];
+      drawSheetFrame(INTRO.hSheet.img, f, (W + 120) + ((wx + 190) - (W + 120)) * p, gy - 105, 0.62, 0);
     } else if (INTRO.kyleT < runDur + diveDur) {
       const p = (INTRO.kyleT - runDur) / diveDur;
       const x0 = wx + 190, y0 = gy - 105;
-      kx = x0 + (wx - x0) * p;
-      ky = y0 + (wy - y0) * p - Math.sin(p * Math.PI) * 60;
-      rot = -p * 1.4;
-      s = 0.62 * (1 - p * 0.55);
-    } else { kx = wx; ky = wy; s = 0.04; }
-    drawSheetFrame(INTRO.hSheet.img, f, kx, ky, s, rot);
+      const kx = x0 + (wx - x0) * p;
+      const ky = y0 + (wy - y0) * p - Math.sin(p * Math.PI) * 60;
+      const s = 0.62 * (1 - p * 0.55);
+      if (s > 0.03 && INTRO.hDive.naturalWidth) drawIntroSprite(INTRO.hDive, kx, ky, 200 * s);
+    }
   }
 
   // white flash into the 90s

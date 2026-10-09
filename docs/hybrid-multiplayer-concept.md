@@ -8,7 +8,7 @@ A 90s suburban street you share with friends. Deck out your bedroom, raise a Tam
 
 ## The plot (slim, but it's there)
 
-You're married, living together in Kokomo. One day you get the bright idea to run a drive-through chilli dog stand straight out of your back bathroom window. The OPEN light flickers on... and a portal rips open in the window and sucks her through. He dives in after her just before it snaps shut.
+You're married, living together in Kokomo. One day you get the bright idea to run a drive-through chili dog stand straight out of your back bathroom window. The OPEN light flickers on... and a portal rips open in the window and sucks her through. He dives in after her just before it snaps shut.
 
 You land in separate corners of BROKENSPORT, a bizarro doppelgänger world — your street, your town, but stuck in the 90s. The plan: find each other, enjoy the ride, make the time together count, and work on things between you along the way.
 
