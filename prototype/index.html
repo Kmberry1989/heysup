@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>hey, sup? — prototype v2</title>
+<title>hey, sup? — prototype v3</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body { width:100%; height:100%; overflow:hidden; background:#0b0b12;
@@ -25,6 +25,16 @@
     border:2px solid #ffd23f; border-radius:999px; padding:10px 22px;
     font-size:15px; font-weight:700; cursor:pointer; white-space:nowrap; }
   #doorPrompt.show { display:block; }
+  /* squirmy helper */
+  #squirmy { position:fixed; left:12px; bottom:16px; z-index:6; display:none;
+    align-items:flex-end; gap:8px; cursor:pointer; max-width:78vw; }
+  #squirmy.show { display:flex; }
+  #squirmy img { width:76px; height:76px; object-fit:cover; object-position:100% 0;
+    border-radius:50%; border:3px solid #7CFC00; background:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,.5); flex-shrink:0; }
+  #sqBubble { background:#fff; border:3px solid #1c1c28; border-radius:14px;
+    padding:8px 12px; font-size:13px; font-weight:600; color:#1c1c28;
+    box-shadow:0 4px 14px rgba(0,0,0,.4); }
   /* phone */
   #phoneOverlay { position:fixed; inset:0; z-index:10; display:none;
     align-items:center; justify-content:center; background:rgba(5,5,12,.72); }
@@ -59,6 +69,18 @@
   #feedBtn { background:#ff6b6b; } #playBtn { background:#4ecdc4; }
   .petbtns button:active { transform:scale(.94); }
   #bamImg { width:100%; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+  /* weedsweeper */
+  #weedStatus { text-align:center; font-weight:800; font-size:14px; margin:2px 0 8px; color:#2d6a4f; min-height:20px; }
+  #weedGrid { display:grid; grid-template-columns:repeat(8,1fr); gap:3px; align-self:center; }
+  .wcell { width:32px; height:32px; background:#b7e4a8; border-radius:6px;
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+    font-weight:800; color:#2d6a4f; cursor:pointer; }
+  .wcell.open { background:#f4f1de; cursor:default; }
+  .wcell.weed { background:#ffd6d6; }
+  .weedbtns { display:flex; gap:8px; justify-content:center; margin-top:10px; }
+  .weedbtns button { font-size:13px; font-weight:700; border:none; border-radius:999px;
+    padding:8px 14px; cursor:pointer; background:#2d6a4f; color:#fff; }
+  .weedbtns button.active { background:#d68c45; }
   #toast { position:fixed; left:50%; bottom:110px; transform:translateX(-50%);
     background:rgba(10,10,20,.9); color:#fff; padding:8px 18px; border-radius:999px;
     font-size:13px; z-index:20; display:none; }
@@ -72,11 +94,12 @@
 <canvas id="game"></canvas>
 <div id="hud">
   <div class="title">hey, sup?</div>
-  <div class="hint">prototype v2 &middot; &larr;&rarr;/AD walk &middot; &uarr; enter arcade &middot; tap phone</div>
+  <div class="hint">prototype v3 &middot; &larr;&rarr;/AD walk &middot; &uarr; enter &middot; tap phone</div>
 </div>
 <button id="swapBtn" class="hudbtn" aria-label="Swap character">🔄</button>
 <button id="phoneBtn" class="hudbtn" aria-label="Open phone">📱</button>
 <div id="doorPrompt"></div>
+<div id="squirmy"><img src="assets/squirmy.webp" alt="Squirmy"><div id="sqBubble"></div></div>
 <div id="phoneOverlay">
   <div id="phone">
     <div class="notch"></div>
@@ -97,6 +120,15 @@
     <div id="pBam" class="pscreen">
       <div class="phead"><div class="back" data-back>‹</div><div class="ptitle">BAM</div></div>
       <img id="bamImg" src="assets/bam.webp" alt="BAM conversation">
+    </div>
+    <div id="pWeed" class="pscreen">
+      <div class="phead"><div class="back" data-back>‹</div><div class="ptitle">WEEDSWEEPER</div></div>
+      <div id="weedStatus">find the weeds, don't pick 'em 🌿</div>
+      <div id="weedGrid"></div>
+      <div class="weedbtns">
+        <button id="weedNew">🔄 New</button>
+        <button id="weedFlag">🚩 Flag: off</button>
+      </div>
     </div>
   </div>
 </div>
@@ -131,14 +163,17 @@ resize();
 
 const streetImg = new Image(); streetImg.src = 'assets/street.webp';
 const arcadeImg = new Image(); arcadeImg.src = 'assets/arcade.webp';
+const mallImg = new Image(); mallImg.src = 'assets/mall.webp';
 const himImg = new Image(); himImg.src = 'assets/him.png';
 const herImg = new Image(); herImg.src = 'assets/her.png';
 SHEETS.him.img = himImg; SHEETS.her.img = herImg;
-const SCENE_IMG = { street: streetImg, arcade: arcadeImg };
+const SCENE_IMG = { street: streetImg, arcade: arcadeImg, mall: mallImg };
+const SCENE_BG = { street: '#7ec8f7', arcade: '#2a1a3e', mall: '#3e2a1a' };
 
 const player = { x: 400, dir: 1, moving: false, animT: 0, heightPx: 200 };
 let char = 'him';
 let scene = 'street';
+let enteredFrom = null; // which street door we used
 const SPEED = 300;
 const keys = {};
 let touchLeft = false, touchRight = false;
@@ -178,25 +213,56 @@ canvas.addEventListener('mousedown', e => { mouseDown = true; mouseDir = touchDi
 window.addEventListener('mouseup', () => { mouseDown = false; mouseDir = null; });
 window.addEventListener('mousemove', e => { if (mouseDown) mouseDir = touchDir(e); });
 
-// scenes
+// scenes + doors
 function bgAspect(img) {
   return (img.naturalWidth && img.naturalHeight) ? img.naturalWidth / img.naturalHeight : 16/9;
 }
 function worldW() {
   return Math.max(W, H * bgAspect(SCENE_IMG[scene]));
 }
-const DOOR = [0.60, 0.70]; // arcade door zone on street (fraction of worldW)
+const DOORS = { arcade: [0.60, 0.70], mall: [0.80, 0.90] };
 const doorPrompt = document.getElementById('doorPrompt');
+function doorAt() {
+  const w = worldW(), zx = player.x / w;
+  for (const k of Object.keys(DOORS)) {
+    if (zx >= DOORS[k][0] && zx <= DOORS[k][1]) return k;
+  }
+  return null;
+}
 function tryEnter() {
   if (scene !== 'street') return;
-  const w = worldW(), zx = player.x / w;
-  if (zx >= DOOR[0] && zx <= DOOR[1]) { scene = 'arcade'; player.x = worldW() * 0.5; player.animT = 0; }
+  const d = doorAt();
+  if (d) {
+    enteredFrom = d; scene = d; player.x = worldW() * 0.5; player.animT = 0;
+    if (d === 'arcade') squirmyTip('arcade', 'The arcade! Mullet Kart grudge matches go down here. Check the Events app on your phone!');
+    if (d === 'mall') squirmyTip('mall', 'The food court! Best chilli dogs in the bizarro 90s. Probably.');
+  }
 }
 function tryExit() {
-  if (scene !== 'arcade') return;
-  scene = 'street'; player.x = worldW() * ((DOOR[0] + DOOR[1]) / 2); player.animT = 0;
+  if (scene === 'street' || !enteredFrom) return;
+  const d = enteredFrom;
+  scene = 'street'; enteredFrom = null;
+  player.x = worldW() * ((DOORS[d][0] + DOORS[d][1]) / 2); player.animT = 0;
 }
 doorPrompt.addEventListener('click', () => { scene === 'street' ? tryEnter() : tryExit(); });
+
+// squirmy helper
+const squirmyEl = document.getElementById('squirmy');
+const sqBubble = document.getElementById('sqBubble');
+const seenTips = new Set();
+let sqTimer = null;
+function squirmyTip(key, text) {
+  if (seenTips.has(key)) return;
+  seenTips.add(key);
+  sqBubble.textContent = text;
+  squirmyEl.classList.add('show');
+  clearTimeout(sqTimer);
+  sqTimer = setTimeout(() => squirmyEl.classList.remove('show'), 7000);
+}
+squirmyEl.addEventListener('click', () => {
+  squirmyEl.classList.remove('show');
+  clearTimeout(sqTimer);
+});
 
 // character swap
 document.getElementById('swapBtn').addEventListener('click', () => {
@@ -219,6 +285,7 @@ document.getElementById('phoneBtn').addEventListener('click', e => {
   e.stopPropagation();
   showScreen('pHome');
   overlay.classList.add('open'); closeHint.classList.add('open');
+  squirmyTip('phone', "That's your phone! TamaGotcha lives in there — and WEEDSWEEPER, if you're feeling lucky. 🌿");
 });
 overlay.addEventListener('click', e => {
   if (e.target === overlay) { overlay.classList.remove('open'); closeHint.classList.remove('open'); }
@@ -232,7 +299,7 @@ document.querySelectorAll('[data-back]').forEach(b =>
 
 const APPS = [
   ['🚪','Room'], ['⭐','Events'], ['📮','Mailbox'], ['👥','Friends'],
-  ['💬','BAM'], ['🥚','TamaGotcha'], ['🌐','MyPlace'], ['⚙️','Settings']
+  ['💬','BAM'], ['🥚','TamaGotcha'], ['🌿','WEEDSWEEPER'], ['🌐','MyPlace']
 ];
 const grid = document.getElementById('appGrid');
 APPS.forEach(([ico, name]) => {
@@ -242,7 +309,11 @@ APPS.forEach(([ico, name]) => {
   d.addEventListener('click', () => {
     if (name === 'TamaGotcha') showScreen('pTama');
     else if (name === 'BAM') showScreen('pBam');
-    else toast(name + ' — coming in v3');
+    else if (name === 'WEEDSWEEPER') {
+      showScreen('pWeed');
+      squirmyTip('weed', "WEEDSWEEPER! Tap to clear a tile, flag the weeds. Don't get pranked! 🌿");
+    }
+    else toast(name + ' — coming in v4');
   });
   grid.appendChild(d);
 });
@@ -271,6 +342,106 @@ setInterval(() => {
 }, 2000);
 petUI();
 
+// WEEDSWEEPER mini-app
+const WN = 8, WCOUNT = 10;
+let wWeeds = new Set(), wOpen = new Set(), wFlag = new Set(), wOver = false, wFlagMode = false;
+const weedGrid = document.getElementById('weedGrid');
+const weedStatus = document.getElementById('weedStatus');
+const weedFlagBtn = document.getElementById('weedFlag');
+function weedNew() {
+  wWeeds = new Set(); wOpen = new Set(); wFlag = new Set(); wOver = false;
+  while (wWeeds.size < WCOUNT) wWeeds.add(Math.floor(Math.random() * WN * WN));
+  weedStatus.textContent = "find the weeds, don't pick 'em 🌿";
+  weedDraw();
+}
+function weedAdj(i) {
+  const r = Math.floor(i / WN), c = i % WN;
+  let n = 0;
+  for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+    if (!dr && !dc) continue;
+    const rr = r + dr, cc = c + dc;
+    if (rr >= 0 && rr < WN && cc >= 0 && cc < WN && wWeeds.has(rr * WN + cc)) n++;
+  }
+  return n;
+}
+function weedReveal(i) {
+  if (wOver || wOpen.has(i) || wFlag.has(i)) return;
+  if (wWeeds.has(i)) {
+    wOver = true;
+    weedStatus.textContent = 'PRANKED!! 🌿😱';
+    wWeeds.forEach(w => wOpen.add(w));
+    weedDraw();
+    return;
+  }
+  const stack = [i];
+  while (stack.length) {
+    const j = stack.pop();
+    if (wOpen.has(j) || wFlag.has(j) || wWeeds.has(j)) continue;
+    wOpen.add(j);
+    if (weedAdj(j) === 0) {
+      const r = Math.floor(j / WN), c = j % WN;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+        const rr = r + dr, cc = c + dc;
+        if (rr >= 0 && rr < WN && cc >= 0 && cc < WN) stack.push(rr * WN + cc);
+      }
+    }
+  }
+  if (wOpen.size === WN * WN - WCOUNT) {
+    wOver = true;
+    weedStatus.textContent = 'YARD CLEAN! 🏆✨';
+  }
+  weedDraw();
+}
+function weedDraw() {
+  weedGrid.innerHTML = '';
+  for (let i = 0; i < WN * WN; i++) {
+    const d = document.createElement('div');
+    d.className = 'wcell';
+    if (wOpen.has(i)) {
+      d.classList.add('open');
+      if (wWeeds.has(i)) { d.classList.add('weed'); d.textContent = '🌿'; }
+      else { const n = weedAdj(i); d.textContent = n ? n : ''; }
+    } else if (wFlag.has(i)) {
+      d.textContent = '🚩';
+    }
+    d.addEventListener('click', () => {
+      if (wFlagMode && !wOpen.has(i) && !wOver) {
+        if (wFlag.has(i)) wFlag.delete(i); else wFlag.add(i);
+        weedDraw();
+      } else weedReveal(i);
+    });
+    d.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      if (!wOpen.has(i) && !wOver) {
+        if (wFlag.has(i)) wFlag.delete(i); else wFlag.add(i);
+        weedDraw();
+      }
+    });
+    let lpTimer = null;
+    d.addEventListener('touchstart', () => {
+      lpTimer = setTimeout(() => {
+        lpTimer = 'fired';
+        if (!wOpen.has(i) && !wOver) {
+          if (wFlag.has(i)) wFlag.delete(i); else wFlag.add(i);
+          weedDraw();
+        }
+      }, 450);
+    }, {passive: true});
+    d.addEventListener('touchend', e => {
+      if (lpTimer === 'fired') { e.preventDefault(); lpTimer = null; }
+      else clearTimeout(lpTimer);
+    });
+    weedGrid.appendChild(d);
+  }
+}
+document.getElementById('weedNew').addEventListener('click', weedNew);
+weedFlagBtn.addEventListener('click', () => {
+  wFlagMode = !wFlagMode;
+  weedFlagBtn.textContent = '🚩 Flag: ' + (wFlagMode ? 'on' : 'off');
+  weedFlagBtn.classList.toggle('active', wFlagMode);
+});
+weedNew();
+
 // main loop
 let last = performance.now();
 function frame(now) {
@@ -293,20 +464,19 @@ function frame(now) {
   let camX = Math.max(0, Math.min(w - W, player.x - W / 2));
 
   const img = SCENE_IMG[scene];
-  ctx.fillStyle = scene === 'arcade' ? '#2a1a3e' : '#7ec8f7';
+  ctx.fillStyle = SCENE_BG[scene];
   ctx.fillRect(0, 0, W, H);
   if (img.naturalWidth) ctx.drawImage(img, -camX, 0, w, H);
 
   // door prompt
-  const zx = player.x / w;
-  if (scene === 'street' && zx >= DOOR[0] && zx <= DOOR[1]) {
-    doorPrompt.textContent = '▲ enter the arcade';
-    doorPrompt.classList.add('show');
-  } else if (scene === 'arcade') {
+  if (scene === 'street') {
+    const d = doorAt();
+    if (d === 'arcade') { doorPrompt.textContent = '▲ enter the arcade'; doorPrompt.classList.add('show'); }
+    else if (d === 'mall') { doorPrompt.textContent = '▲ enter the mall'; doorPrompt.classList.add('show'); }
+    else doorPrompt.classList.remove('show');
+  } else {
     doorPrompt.textContent = '▼ back to the street';
     doorPrompt.classList.add('show');
-  } else {
-    doorPrompt.classList.remove('show');
   }
 
   // player
