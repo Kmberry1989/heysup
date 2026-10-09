@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>hey, sup? — prototype v5</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  html, body { width:100%; height:100%; overflow:hidden; background:#0b0b12;
+  html, body { width:100%; height:100%; height:100dvh; overflow:hidden; background:#0b0b12;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     touch-action:none; -webkit-user-select:none; user-select:none; }
   #game { position:fixed; inset:0; display:block; }
@@ -18,15 +18,15 @@
     border:3px solid #fff; font-size:26px; display:flex; align-items:center;
     justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); }
   .hudbtn:active { transform:scale(.93); }
-  #phoneBtn { right:14px; bottom:16px; background:#7c5cff; }
-  #swapBtn { right:14px; bottom:84px; background:#ff9f1c; }
-  #doorPrompt { position:fixed; left:50%; bottom:90px; transform:translateX(-50%);
+  #phoneBtn { right:14px; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); background:#7c5cff; }
+  #swapBtn { right:14px; bottom:calc(84px + env(safe-area-inset-bottom, 0px)); background:#ff9f1c; }
+  #doorPrompt { position:fixed; left:50%; bottom:calc(90px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
     z-index:5; display:none; background:rgba(10,10,20,.82); color:#fff;
     border:2px solid #ffd23f; border-radius:999px; padding:10px 22px;
     font-size:15px; font-weight:700; cursor:pointer; white-space:nowrap; }
   #doorPrompt.show { display:block; }
   /* onscreen touch controller (touch devices only) */
-  #dpad { position:fixed; left:12px; bottom:16px; z-index:7; display:none;
+  #dpad { position:fixed; left:12px; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:7; display:none;
     grid-template-columns:repeat(3,54px); grid-template-rows:repeat(3,54px); gap:4px; }
   body.touch #dpad { display:grid; }
   body.touch #dpad.hidden { display:none; }
@@ -37,11 +37,11 @@
   #dpad .left { grid-column:1; grid-row:2; }
   #dpad .down { grid-column:2; grid-row:3; }
   #dpad .right { grid-column:3; grid-row:2; }
-  body.touch #squirmy { bottom:196px; }
-  #dpadToggle { right:14px; bottom:152px; background:#2ec4b6; display:none; }
+  body.touch #squirmy { bottom:calc(196px + env(safe-area-inset-bottom, 0px)); }
+  #dpadToggle { right:14px; bottom:calc(152px + env(safe-area-inset-bottom, 0px)); background:#2ec4b6; display:none; }
   body.touch #dpadToggle { display:flex; }
   /* squirmy helper */
-  #squirmy { position:fixed; left:12px; bottom:16px; z-index:6; display:none;
+  #squirmy { position:fixed; left:12px; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:6; display:none;
     align-items:flex-end; gap:8px; cursor:pointer; max-width:78vw; }
   #squirmy.show { display:flex; }
   #squirmy img { width:76px; height:76px; object-fit:cover; object-position:100% 0;
@@ -53,8 +53,16 @@
   /* main menu */
   #menu { position:fixed; inset:0; z-index:40; display:flex; flex-direction:column;
     align-items:center; justify-content:center; gap:10px; padding:20px;
-    background:linear-gradient(160deg,#2a1a4e 0%,#4b2a86 45%,#0f6f7a 100%); }
+    background:linear-gradient(160deg,#2a1a4e 0%,#4b2a86 45%,#0f6f7a 100%);
+    overflow-y:auto; }
   #menu.hidden { display:none; }
+  @media (max-height:640px) {
+    #menu { gap:6px; padding:12px; }
+    .menu-title { font-size:min(44px,12vw); }
+    #menuCanvas { width:min(320px,70vw); }
+    .char-card canvas { width:56px; height:68px; }
+    .menu-btns button { padding:9px 20px; font-size:15px; }
+  }
   .menu-kicker { color:#7CFC00; font-weight:700; font-size:14px; letter-spacing:3px; text-transform:uppercase; }
   .menu-title { color:#ffd23f; font-size:min(64px,15vw); font-weight:900; font-style:italic;
     -webkit-text-stroke:2px #1b4f9c; text-shadow:4px 4px 0 #1b4f9c; letter-spacing:1px; }
@@ -81,11 +89,11 @@
     align-items:center; justify-content:center; background:rgba(5,5,12,.7);
     color:#fff; font-size:20px; font-weight:800; cursor:pointer; text-align:center; padding:20px; }
   #pauseOverlay.show { display:flex; }
-  #muteBtn { right:14px; bottom:288px; background:#5c5c8a; }
+  #muteBtn { right:14px; bottom:calc(288px + env(safe-area-inset-bottom, 0px)); background:#5c5c8a; }
   /* intro cinematic */
   #introLayer { position:fixed; inset:0; z-index:30; display:none; }
   #introLayer.show { display:block; }
-  #caption { position:fixed; left:50%; bottom:26px; transform:translateX(-50%);
+  #caption { position:fixed; left:50%; bottom:calc(26px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
     z-index:31; display:none; max-width:min(560px,90vw);
     background:rgba(5,5,12,.84); color:#fff; border:2px solid #ffd23f;
     border-radius:14px; padding:12px 18px; font-size:15px; line-height:1.45;
@@ -96,14 +104,14 @@
     background:rgba(10,10,20,.7); color:#fff; border:2px solid #fff;
     border-radius:999px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer; }
   #skipIntro.show { display:block; }
-  #introBtn { right:14px; bottom:220px; background:#b565d8; }
+  #introBtn { right:14px; bottom:calc(220px + env(safe-area-inset-bottom, 0px)); background:#b565d8; }
   body.intro #hud, body.intro .hudbtn, body.intro #dpad,
   body.intro #doorPrompt, body.intro #squirmy { display:none !important; }
   /* phone */
   #phoneOverlay { position:fixed; inset:0; z-index:10; display:none;
     align-items:center; justify-content:center; background:rgba(5,5,12,.72); }
   #phoneOverlay.open { display:flex; }
-  #phone { width:min(330px,86vw); aspect-ratio:9/16.2; background:#1c1c28;
+  #phone { width:min(330px, 86vw, calc((100dvh - 60px) * 9 / 16.2)); aspect-ratio:9/16.2; background:#1c1c28;
     border-radius:34px; border:6px solid #8e7cc3; overflow:hidden; position:relative;
     box-shadow:0 12px 60px rgba(0,0,0,.7); }
   #phone .notch { position:absolute; top:10px; left:50%; transform:translateX(-50%);
@@ -145,13 +153,24 @@
   .weedbtns button { font-size:13px; font-weight:700; border:none; border-radius:999px;
     padding:8px 14px; cursor:pointer; background:#2d6a4f; color:#fff; }
   .weedbtns button.active { background:#d68c45; }
-  #toast { position:fixed; left:50%; bottom:110px; transform:translateX(-50%);
+  #toast { position:fixed; left:50%; bottom:calc(110px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
     background:rgba(10,10,20,.9); color:#fff; padding:8px 18px; border-radius:999px;
     font-size:13px; z-index:20; display:none; }
   #toast.show { display:block; }
   #closeHint { position:fixed; bottom:18px; left:0; right:0; text-align:center;
     color:#fff; font-size:13px; z-index:11; display:none; text-shadow:0 2px 0 #000; }
   #closeHint.open { display:block; }
+  /* rotate request (portrait phones) */
+  #rotateScreen { position:fixed; inset:0; z-index:60; display:none; flex-direction:column;
+    align-items:center; justify-content:center; gap:10px; background:#141428;
+    color:#fff; text-align:center; padding:24px; }
+  #rotateScreen.show { display:flex; }
+  .rot-phone { font-size:52px; animation:rotWiggle 1.6s ease-in-out infinite; }
+  @keyframes rotWiggle { 0%,100% { transform:rotate(-14deg); } 50% { transform:rotate(76deg); } }
+  .rot-title { font-size:22px; font-weight:900; }
+  .rot-sub { font-size:14px; opacity:.75; }
+  #rotDismiss { margin-top:10px; font-size:14px; font-weight:700; border:2px solid #fff;
+    background:transparent; color:#fff; border-radius:999px; padding:10px 20px; cursor:pointer; }
 </style>
 </head>
 <body class="menu">
@@ -191,6 +210,12 @@
   <div class="menu-note">choose your hero &mdash; they&rsquo;re the one who dives in 🌪️</div>
 </div>
 <div id="pauseOverlay">⏸ Paused — tap to resume</div>
+<div id="rotateScreen">
+  <div class="rot-phone">📱</div>
+  <div class="rot-title">rotate your phone</div>
+  <div class="rot-sub">hey, sup? plays best in landscape</div>
+  <button id="rotDismiss">play portrait anyway</button>
+</div>
 <div id="phoneOverlay">
   <div id="phone">
     <div class="notch"></div>
@@ -244,12 +269,31 @@ const ctx = canvas.getContext('2d');
 let W = 0, H = 0, DPR = 1;
 function resize() {
   DPR = Math.min(window.devicePixelRatio || 1, 2);
-  W = window.innerWidth; H = window.innerHeight;
+  const vv = window.visualViewport; // tracks the browser chrome (address bar) when not installed
+  W = Math.round(vv ? vv.width : window.innerWidth);
+  H = Math.round(vv ? vv.height : window.innerHeight);
   canvas.width = W * DPR; canvas.height = H * DPR;
   canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  checkRotate();
 }
 window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(checkRotate, 250));
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', resize);
+  window.visualViewport.addEventListener('scroll', resize);
+}
+let rotDismissed = false;
+function checkRotate() {
+  const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  const portrait = window.innerHeight > window.innerWidth;
+  document.getElementById('rotateScreen').classList.toggle('show', isTouch && portrait && !rotDismissed);
+}
+document.getElementById('rotDismiss').addEventListener('click', () => {
+  rotDismissed = true;
+  document.getElementById('rotateScreen').classList.remove('show');
+  AudioSys.sfx('click');
+});
 resize();
 
 const streetImg = new Image(); streetImg.src = 'game-assets/street.webp';
@@ -434,6 +478,21 @@ function drawIntroSprite(img, cx, cy, h, flip) {
   ctx.scale(flip ? -1 : 1, 1);
   ctx.drawImage(img, -dw / 2, -h / 2, dw, h);
   ctx.restore();
+}
+// shared character animation — the same walk/idle cycle the keyboard and touch drive in-game
+function animFrame(S, av) {
+  const set = av.moving ? S.walk : S.idle;
+  const fps = av.moving ? 10 : 3;
+  return set[Math.floor(av.animT * fps) % set.length];
+}
+function drawAvatar(x, img, f, cx, feetY, heightPx, dir) {
+  const dw = heightPx * (f.w / f.h);
+  const dx = cx - dw / 2, dy = feetY - heightPx;
+  x.save();
+  if (dir < 0) { x.translate(dx + dw / 2, 0); x.scale(-1, 1); x.translate(-(dx + dw / 2), 0); }
+  if (img.naturalWidth) x.drawImage(img, f.x, f.y, f.w, f.h, dx, dy, dw, heightPx);
+  x.restore();
+  return dw;
 }
 function drawSheetFrame(img, f, cx, feetY, s, rot) {
   const dw = f.w * s, dh = f.h * s;
@@ -637,22 +696,17 @@ const menuEl = document.getElementById('menu');
 const menuCanvas = document.getElementById('menuCanvas');
 const mctx = menuCanvas.getContext('2d');
 const menuAnim = { t: 0 };
-function drawFrameTo(x, img, f, cx, feetY, s, dir) {
-  const dw = f.w * s, dh = f.h * s;
-  x.save();
-  x.translate(cx, feetY);
-  x.scale(dir, 1);
-  if (img.naturalWidth) x.drawImage(img, f.x, f.y, f.w, f.h, -dw / 2, -dh, dw, dh);
-  x.restore();
-}
+const menuDuo = [
+  { sk: 'him', x: 40, dir: 1, moving: true, animT: 0 },
+  { sk: 'her', x: 380, dir: -1, moving: true, animT: 0.5 }
+];
 function drawMenu(dt) {
-  menuAnim.t += dt;
   if (!menuAnim.portraits && himImg.naturalWidth && herImg.naturalWidth) {
     drawPortrait('portHim', SHEETS.him);
     drawPortrait('portHer', SHEETS.her);
     menuAnim.portraits = true;
   }
-  const t = menuAnim.t, Mw = menuCanvas.width, Mh = menuCanvas.height;
+  const Mw = menuCanvas.width, Mh = menuCanvas.height;
   mctx.clearRect(0, 0, Mw, Mh);
   if (streetImg.naturalWidth) {
     const s = Math.max(Mw / streetImg.naturalWidth, Mh / streetImg.naturalHeight);
@@ -661,16 +715,16 @@ function drawMenu(dt) {
     mctx.drawImage(streetImg, (Mw - dw) / 2, (Mh - dh) / 2, dw, dh);
     mctx.globalAlpha = 1;
   } else { mctx.fillStyle = '#0b0b18'; mctx.fillRect(0, 0, Mw, Mh); }
-  // the duo strolls past each other on loop — animated sprite-sheet placeholders
-  const cyc = 9, ph = (t % cyc) / cyc;
-  const hx = -60 + ph * (Mw + 120);
-  const ex = (Mw + 60) - ph * (Mw + 120);
+  // the duo strolls on the shared in-game animation the keyboard and touch drive
   const gy = Mh - 12;
-  const hf = SHEETS.him.walk[Math.floor(t * 10) % SHEETS.him.walk.length];
-  const ef = SHEETS.her.walk[Math.floor(t * 10 + 4) % SHEETS.her.walk.length];
-  const targetH = 100; // his sprite renders at the same height as hers
-  drawFrameTo(mctx, himImg, hf, hx, gy, targetH / hf.h, 1);
-  drawFrameTo(mctx, herImg, ef, ex, gy, targetH / ef.h, -1);
+  for (const av of menuDuo) {
+    const S = SHEETS[av.sk];
+    av.animT += dt;
+    av.x += av.dir * 95 * dt;
+    if (av.x > Mw + 70) { av.x = Mw + 70; av.dir = -1; }
+    if (av.x < -70) { av.x = -70; av.dir = 1; }
+    drawAvatar(mctx, S.img, animFrame(S, av), av.x, gy, 100, av.dir);
+  }
 }
 document.getElementById('startBtn').addEventListener('click', () => {
   AudioSys.init(); AudioSys.sfx('click');
@@ -808,6 +862,13 @@ const AudioSys = {
   kick(vol) {
     if (!this.ctx || this.muted || paused) return;
     this.tone(150, 0.14, 'sine', vol || 0.15, 40);
+  },
+  step(alt) { // low rhythmic footstep for directional movement
+    if (!this.ctx || this.muted || paused) return;
+    this.tone(alt ? 96 : 82, 0.09, 'sine', 0.11, 55);
+  },
+  buzz(ms) { // haptic where the device allows it
+    try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {}
   },
   startMusic(modeName) {
     const song = SONGS[modeName] || SONGS.street;
@@ -1051,8 +1112,16 @@ function frame(now) {
     player.dir = right ? 1 : -1;
     player.x += player.dir * SPEED * dt;
     player.animT += dt;
+    player.stepT = (player.stepT || 0) + dt;
+    if (player.stepT >= 0.3) { // rhythmic steps while held down
+      player.stepT = 0;
+      player.stepAlt = !player.stepAlt;
+      AudioSys.step(player.stepAlt);
+      AudioSys.buzz(12);
+    }
   } else {
     player.animT += dt * 0.4;
+    player.stepT = 0;
   }
 
   const w = worldW();
@@ -1082,20 +1151,10 @@ function frame(now) {
     doorPrompt.classList.add('show');
   }
 
-  // player
+  // player — shared animation
   const S = SHEETS[char];
-  const set = player.moving ? S.walk : S.idle;
-  const fps = player.moving ? 10 : 3;
-  const f = set[Math.floor(player.animT * fps) % set.length];
-  const dh = player.heightPx, dw = dh * (f.w / f.h);
   const groundY = H * 0.84;
-  const dx = player.x - camX - dw / 2, dy = groundY - dh;
-  ctx.save();
-  if (player.dir < 0) {
-    ctx.translate(dx + dw / 2, 0); ctx.scale(-1, 1); ctx.translate(-(dx + dw / 2), 0);
-  }
-  if (S.img.naturalWidth) ctx.drawImage(S.img, f.x, f.y, f.w, f.h, dx, dy, dw, dh);
-  ctx.restore();
+  const dw = drawAvatar(ctx, S.img, animFrame(S, player), player.x - camX, groundY, player.heightPx, player.dir);
   ctx.fillStyle = 'rgba(0,0,0,.18)';
   ctx.beginPath();
   ctx.ellipse(player.x - camX, groundY + 6, dw * 0.32, 10, 0, 0, Math.PI * 2);
