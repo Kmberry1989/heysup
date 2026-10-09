@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hey, sup? — SFX Lab</title>
+<style>
+  body { background:#0b0b12; color:#fff; font-family:system-ui,sans-serif; margin:0; padding:20px;
+    max-width:640px; margin-inline:auto; }
+  h1 { color:#ffd23f; font-size:24px; }
+  p.hint { color:#bdbde0; font-size:14px; }
+  .sfx { background:#151522; border:2px solid #2c2c4a; border-radius:14px; padding:14px; margin:12px 0; }
+  .sfx h2 { margin:0 0 4px; font-size:17px; color:#ff5fa2; text-transform:capitalize; }
+  .sfx .desc { font-size:12px; color:#8a8aa8; margin-bottom:10px; }
+  .row { display:flex; gap:10px; }
+  button { flex:1; padding:14px 8px; font-size:16px; font-weight:800; border-radius:12px; cursor:pointer;
+    border:2px solid #ffd23f; background:#23233a; color:#fff; }
+  button:active { transform:scale(.96); background:#2e2e4a; }
+  button small { display:block; font-size:11px; font-weight:400; color:#bdbde0; margin-top:4px; }
+  .cur { outline:2px dashed #5fd97a; outline-offset:-6px; }
+</style>
+</head>
+<body>
+<h1>🔊 SFX Lab</h1>
+<p class="hint">Tap each variant to hear it. Variant <b>A</b> (green outline) is what's in the game now.
+Tell me your picks like <b>"portal B, whoosh C, win A"</b> and I'll wire them in.</p>
+<div id="lab"></div>
+<script>
+let AC = null, noiseBuf = null;
+function ac() {
+  if (!AC) {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    noiseBuf = AC.createBuffer(1, AC.sampleRate * 1, AC.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
+function tone(f, dur, type, vol, slideTo, delay) {
+  const c = ac(), t = c.currentTime + (delay || 0);
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type || 'square'; o.frequency.setValueAtTime(f, t);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t + dur);
+  g.gain.setValueAtTime(vol || 0.12, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g); g.connect(c.destination);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+function noise(dur, vol, fFrom, fTo, delay) {
+  const c = ac(), t = c.currentTime + (delay || 0);
+  const src = c.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+  const fl = c.createBiquadFilter(); fl.type = 'lowpass';
+  fl.frequency.setValueAtTime(fFrom || 1200, t);
+  if (fTo) fl.frequency.exponentialRampToValueAtTime(fTo, t + dur);
+  const g = c.createGain();
+  g.gain.setValueAtTime(vol || 0.12, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  src.connect(fl); fl.connect(g); g.connect(c.destination);
+  src.start(t); src.stop(t + dur + 0.02);
+}
+const SFX = {
+  click: { desc: 'UI taps, buttons', v: {
+    A: () => tone(660, 0.07, 'square', 0.1),
+    B: () => tone(880, 0.05, 'sine', 0.12),
+    C: () => noise(0.05, 0.14, 4000, 1500) } },
+  whoosh: { desc: 'Scene changes, portal gusts', v: {
+    A: () => tone(180, 0.35, 'sawtooth', 0.1, 900),
+    B: () => noise(0.4, 0.14, 400, 5000),
+    C: () => tone(300, 0.25, 'sine', 0.14, 1200) } },
+  dive: { desc: 'Hero dives into the portal', v: {
+    A: () => tone(900, 0.4, 'sawtooth', 0.12, 150),
+    B: () => { tone(700, 0.5, 'sine', 0.14, 100); tone(350, 0.5, 'sine', 0.08, 90, 0.05); },
+    C: () => tone(500, 0.35, 'square', 0.1, 80) } },
+  pop: { desc: 'Pickups, small wins', v: {
+    A: () => tone(520, 0.12, 'sine', 0.12, 940),
+    B: () => tone(400, 0.08, 'square', 0.12, 800),
+    C: () => { tone(520, 0.08, 'sine', 0.12); tone(780, 0.1, 'sine', 0.12, null, 0.07); } } },
+  portal: { desc: 'The portal tears open', v: {
+    A: () => { tone(70, 1.2, 'sawtooth', 0.14, 320); tone(140, 1.2, 'triangle', 0.1, 640); },
+    B: () => { [220, 233, 247].forEach((f, i) => tone(f, 1.1, 'triangle', 0.08, f * 2.2, i * 0.06)); },
+    C: () => { tone(55, 1.0, 'sawtooth', 0.14, 90); [880, 1100, 1320, 1760].forEach((f, i) => tone(f, 0.15, 'sine', 0.07, null, 0.5 + i * 0.1)); } } },
+  lever: { desc: 'Pulling the knife-switch', v: {
+    A: () => { tone(130, 0.09, 'square', 0.16, 55); tone(300, 0.3, 'sine', 0.08, 900, 0.08); },
+    B: () => { tone(200, 0.07, 'square', 0.16, 60); tone(150, 0.4, 'triangle', 0.1, 150, 0.07); },
+    C: () => { noise(0.08, 0.18, 2500, 300); tone(500, 0.25, 'sine', 0.08, 1000, 0.07); } } },
+  shimmer: { desc: 'Magical sparkle moments', v: {
+    A: () => [660, 880, 1320].forEach((f, i) => tone(f, 0.25, 'sine', 0.09, null, i * 0.09)),
+    B: () => [523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, 0.2, 'sine', 0.08, null, i * 0.07)),
+    C: () => tone(600, 0.5, 'triangle', 0.1, 1800) } },
+  win: { desc: 'Minigame victory', v: {
+    A: () => [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.16, 'square', 0.1, null, i * 0.11)),
+    B: () => [392, 523, 659, 784].forEach((f, i) => tone(f, 0.22, 'triangle', 0.12, null, i * 0.13)),
+    C: () => { [523, 659, 784].forEach(f => tone(f, 0.3, 'square', 0.07)); [659, 784, 1046].forEach(f => tone(f, 0.4, 'square', 0.07, null, 0.18)); } } },
+  lose: { desc: 'Minigame defeat', v: {
+    A: () => tone(300, 0.5, 'sawtooth', 0.1, 90),
+    B: () => tone(220, 0.7, 'sine', 0.14, 55),
+    C: () => [392, 370, 311].forEach((f, i) => tone(f, 0.25, 'triangle', 0.1, f * 0.94, i * 0.16)) } } },
+  step: { desc: 'Footsteps while moving', v: {
+    A: () => tone(82, 0.09, 'sine', 0.11, 55),
+    B: () => noise(0.06, 0.1, 900, 300),
+    C: () => tone(120, 0.07, 'triangle', 0.1, 70) } } },
+};
+const lab = document.getElementById('lab');
+for (const [name, sfx] of Object.entries(SFX)) {
+  const div = document.createElement('div');
+  div.className = 'sfx';
+  const notes = { click: 'short + clicky', whoosh: 'airy sweep', dive: 'falling pitch', pop: 'bright blip',
+    portal: 'big + eerie', lever: 'mechanical clunk', shimmer: 'sparkly', win: 'happy arp', lose: 'sad slide', step: 'soft thud' };
+  let btns = '';
+  for (const [v, fn] of Object.entries(sfx.v))
+    btns += `<button data-sfx="${name}" data-v="${v}" class="${v === 'A' ? 'cur' : ''}">${v}<small>${notes[name]}</small></button>`;
+  div.innerHTML = `<h2>${name}</h2><div class="desc">${sfx.desc}</div><div class="row">${btns}</div>`;
+  lab.appendChild(div);
+}
+lab.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  SFX[b.dataset.sfx].v[b.dataset.v]();
+});
+</script>
+</body>
+</html>

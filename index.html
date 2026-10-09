@@ -84,15 +84,36 @@
   .char-card.selected { border-color:#ffd23f; background:rgba(255,210,63,.15);
     box-shadow:0 0 14px rgba(255,210,63,.5); }
   body.menu #hud, body.menu .hudbtn, body.menu #dpad, body.menu #squirmy { display:none !important; }
+  /* splash */
+  #splash { position:fixed; inset:0; z-index:60; background:#0b0b12; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+    transition:opacity .5s ease; overflow:hidden; }
+  #splash.hide { opacity:0; pointer-events:none; }
+  #splash .sshow { position:absolute; inset:0; }
+  #splash .sshow img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+    opacity:0; transition:opacity 1.4s ease; }
+  #splash .sshow img.on { opacity:.85; }
+  #splash .shade { position:absolute; inset:0;
+    background:radial-gradient(ellipse at center, transparent 25%, rgba(5,5,12,.78) 100%); }
+  #splash .gametitle { position:relative; font-size:clamp(44px,12vw,84px); font-weight:900; color:#ffd23f;
+    text-shadow:3px 3px 0 #b565d8, 6px 6px 0 rgba(0,0,0,.45); letter-spacing:1px; }
+  #splash .tapstart { position:relative; color:#fff; font-size:18px; font-weight:800;
+    background:rgba(10,10,20,.65); border:2px solid #ffd23f; border-radius:999px; padding:10px 26px;
+    animation:resumePulse 1.6s ease-in-out infinite; }
   /* pause */
   #pauseOverlay { position:fixed; inset:0; z-index:50; display:none;
     align-items:center; justify-content:center; background:rgba(5,5,12,.7);
     color:#fff; font-size:20px; font-weight:800; cursor:pointer; text-align:center; padding:20px; }
   #pauseOverlay.show { display:flex; }
+  #pauseOverlay { flex-direction:column; gap:16px; }
+  #resumeSprite { width:min(280px,64vw); cursor:pointer; animation:resumePulse 1.6s ease-in-out infinite;
+    filter:drop-shadow(0 4px 14px rgba(255,95,162,.45)); }
+  @keyframes resumePulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.05); } }
   #muteBtn { right:14px; bottom:calc(288px + env(safe-area-inset-bottom, 0px)); background:#5c5c8a; }
   /* intro cinematic */
-  #introLayer { position:fixed; inset:0; z-index:30; display:none; }
+  #introLayer { position:fixed; inset:0; z-index:30; display:none; opacity:0; transition:opacity .45s ease; }
   #introLayer.show { display:block; }
+  #introLayer.fadein { opacity:1; }
   #caption { position:fixed; left:50%; bottom:calc(26px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
     z-index:31; display:none; max-width:min(560px,90vw);
     background:rgba(5,5,12,.84); color:#fff; border:2px solid #ffd23f;
@@ -100,6 +121,10 @@
     text-align:center; }
   #caption.show { display:block; }
   #caption .who { color:#ffd23f; font-weight:800; }
+  .capword { display:inline-block; animation:capBloom .3s cubic-bezier(.2,1.5,.4,1); }
+  @keyframes capBloom { 0% { transform:scale(.3) translateY(8px); opacity:0; }
+    60% { transform:scale(1.14) translateY(-1px); opacity:1; }
+    100% { transform:scale(1) translateY(0); opacity:1; } }
   #skipIntro { position:fixed; top:12px; right:12px; z-index:32; display:none;
     background:rgba(10,10,20,.7); color:#fff; border:2px solid #fff;
     border-radius:999px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer; }
@@ -195,6 +220,12 @@
 <div id="introLayer"></div>
 <div id="caption"></div>
 <button id="skipIntro">Skip ››</button>
+<div id="splash">
+  <div class="sshow" id="sshow"></div>
+  <div class="shade"></div>
+  <div class="gametitle">hey, sup?</div>
+  <div class="tapstart">▶ tap to start</div>
+</div>
 <div id="menu">
   <div class="menu-kicker">a 90s retro adventure</div>
   <div class="menu-title">hey, sup?</div>
@@ -209,7 +240,7 @@
   </div>
   <div class="menu-note">choose your hero &mdash; they&rsquo;re the one who dives in 🌪️</div>
 </div>
-<div id="pauseOverlay">⏸ Paused — tap to resume</div>
+<div id="pauseOverlay"><div>⏸ Paused</div><img id="resumeSprite" src="game-assets/resume-button.webp" alt="Resume"></div>
 <div id="rotateScreen">
   <div class="rot-phone">📱</div>
   <div class="rot-title">rotate your phone</div>
@@ -408,22 +439,81 @@ function doorAt() {
   }
   return null;
 }
+// ---- smooth screen transitions (fade / iris / wipe / pixels) ----
+const TRANS = { active: false, t: 0, dur: 0.8, kind: 'iris', phase: 0, onMid: null };
+const TRANS_KINDS = ['fade', 'iris', 'wipe', 'pixels'];
+function startTransition(kind, dur, onMid) {
+  if (TRANS.active) return;
+  TRANS.active = true; TRANS.t = 0; TRANS.dur = dur || 0.8;
+  TRANS.kind = TRANS_KINDS.includes(kind) ? kind : 'fade';
+  TRANS.phase = 0; TRANS.onMid = onMid || null;
+}
+function updateTransition(dt) {
+  TRANS.t += dt;
+  const half = TRANS.dur / 2;
+  if (TRANS.phase === 0 && TRANS.t >= half) {
+    TRANS.phase = 1;
+    if (TRANS.onMid) { const f = TRANS.onMid; TRANS.onMid = null; f(); }
+  }
+  if (TRANS.t >= TRANS.dur) TRANS.active = false;
+}
+function drawTransition() {
+  const half = TRANS.dur / 2;
+  let cov = TRANS.phase === 0 ? TRANS.t / half : 1 - (TRANS.t - half) / half;
+  cov = Math.max(0, Math.min(1, cov));
+  const e = cov * cov * (3 - 2 * cov);
+  ctx.save();
+  if (TRANS.kind === 'fade') {
+    ctx.globalAlpha = e;
+    ctx.fillStyle = '#06060c'; ctx.fillRect(0, 0, W, H);
+  } else if (TRANS.kind === 'iris') {
+    const maxR = Math.hypot(W, H) / 2 + 40;
+    const r = Math.max(0.1, maxR * (1 - e));
+    ctx.beginPath();
+    ctx.rect(0, 0, W, H);
+    ctx.arc(W / 2, H / 2, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#06060c';
+    ctx.fill('evenodd');
+  } else if (TRANS.kind === 'wipe') {
+    const edge = e * (W + 120) - 60;
+    ctx.fillStyle = '#06060c';
+    ctx.fillRect(0, 0, edge, H);
+    if (e > 0 && e < 1) {
+      ctx.fillStyle = '#ff5fa2'; ctx.fillRect(edge - 9, 0, 4, H);
+      ctx.fillStyle = '#ffd23f'; ctx.fillRect(edge - 5, 0, 5, H);
+    }
+  } else if (TRANS.kind === 'pixels') {
+    const n = 26, bs = Math.max(W, H) / n, rows = Math.ceil(H / bs);
+    ctx.fillStyle = '#06060c';
+    for (let i = 0; i < n; i++) for (let j = 0; j < rows; j++) {
+      const h = ((i * 73856093) ^ (j * 19349663) ^ 83492791) >>> 0;
+      if ((h % 100) / 100 < e) ctx.fillRect(i * bs, j * bs, bs + 1, bs + 1);
+    }
+  }
+  ctx.restore();
+}
 function tryEnter() {
-  if (scene !== 'street') return;
+  if (scene !== 'street' || TRANS.active) return;
   const d = doorAt();
   if (d) {
-    enteredFrom = d; scene = d; player.x = worldW() * 0.5; player.animT = 0;
-    AudioSys.sfx('whoosh'); AudioSys.startMusic(d);
-    if (d === 'arcade') squirmyTip('arcade', 'The arcade! Mullet Kart grudge matches go down here. Check the Events app on your phone!');
-    if (d === 'mall') squirmyTip('mall', 'The food court! Best chili dogs in the bizarro 90s. Probably.');
+    AudioSys.sfx('whoosh');
+    startTransition('iris', 0.8, () => {
+      enteredFrom = d; scene = d; player.x = worldW() * 0.5; player.animT = 0;
+      AudioSys.startMusic(d);
+      if (d === 'arcade') squirmyTip('arcade', 'The arcade! Mullet Kart grudge matches go down here. Check the Events app on your phone!');
+      if (d === 'mall') squirmyTip('mall', 'The food court! Best chili dogs in the bizarro 90s. Probably.');
+    });
   }
 }
 function tryExit() {
-  if (scene === 'street' || !enteredFrom) return;
+  if (scene === 'street' || !enteredFrom || TRANS.active) return;
   const d = enteredFrom;
-  scene = 'street'; enteredFrom = null;
-  AudioSys.sfx('whoosh'); AudioSys.startMusic('street');
-  player.x = worldW() * ((DOORS[d][0] + DOORS[d][1]) / 2); player.animT = 0;
+  AudioSys.sfx('whoosh');
+  startTransition('iris', 0.8, () => {
+    scene = 'street'; enteredFrom = null;
+    AudioSys.startMusic('street');
+    player.x = worldW() * ((DOORS[d][0] + DOORS[d][1]) / 2); player.animT = 0;
+  });
 }
 doorPrompt.addEventListener('click', () => { AudioSys.sfx('click'); scene === 'street' ? tryEnter() : tryExit(); });
 
@@ -445,6 +535,31 @@ squirmyEl.addEventListener('click', () => {
   clearTimeout(sqTimer);
 });
 
+// ---- splash screen ----
+const splash = document.getElementById('splash');
+const sshow = document.getElementById('sshow');
+['game-assets/moment-1.webp', 'game-assets/moment-2.webp', 'game-assets/moment-3.webp'].forEach((src, i) => {
+  const img = new Image();
+  img.src = src;
+  if (i === 0) img.classList.add('on');
+  sshow.appendChild(img);
+});
+let splashIdx = 0;
+setInterval(() => {
+  if (!document.body.contains(splash)) return;
+  const imgs = sshow.children;
+  if (!imgs.length) return;
+  imgs[splashIdx].classList.remove('on');
+  splashIdx = (splashIdx + 1) % imgs.length;
+  imgs[splashIdx].classList.add('on');
+}, 3200);
+splash.addEventListener('click', () => {
+  AudioSys.init();
+  AudioSys.sfx('click');
+  splash.classList.add('hide');
+  setTimeout(() => splash.remove(), 600);
+}, { once: true });
+
 // ---- intro cinematic ----
 const introLayer = document.getElementById('introLayer');
 const captionEl = document.getElementById('caption');
@@ -462,7 +577,7 @@ function buildBeats() {
   return [
     { dur: 3.4, cap: "Inside the stand &mdash; shaking off the dust." },
     { dur: 3.4, cap: "Every shelf. Every surface. Tonight&rsquo;s the night." },
-    { dur: 4.2, cap: "One lever. Two hands." },
+    { dur: 4.2, cap: "" },
     { dur: 3.2, cap: "Kokomo. Friday night. They crank open the back bathroom window for business." },
     { dur: 4.4, cap: "<span class='who'>" + victimName + ":</span> &ldquo;Chili dogs are on.&rdquo; <span class='who'>" + heroName + ":</span> &ldquo;Lights on &mdash; we&rsquo;re OPEN.&rdquo;" },
     { dur: 3.0, cap: "The OPEN sign flickers&hellip; and the night tears open." },
@@ -517,6 +632,63 @@ function drawSheetFrame(img, f, cx, feetY, s, rot) {
   if (img.naturalWidth) ctx.drawImage(img, f.x, f.y, f.w, f.h, -dw / 2, -dh, dw, dh);
   ctx.restore();
 }
+let capTimer = null, capQueue = null;
+function detectTone(text) {
+  if (/!!/.test(text)) return { base: 330, jit: 70, rate: 75, type: 'square', slide: 0.85 };
+  if (/\?/.test(text)) return { base: 270, jit: 55, rate: 95, type: 'square', slide: 1.3, rise: true };
+  if (/\u2026|\.\.\./.test(text)) return { base: 150, jit: 25, rate: 160, type: 'sine', slide: 0.7 };
+  if (/[\u201c"]/ .test(text)) return { base: 235, jit: 45, rate: 88, type: 'triangle', slide: 0.9 };
+  return { base: 178, jit: 32, rate: 108, type: 'triangle', slide: 0.9 };
+}
+function showCaption(html) {
+  if (capTimer) { clearInterval(capTimer); capTimer = null; }
+  capQueue = null;
+  if (!html) { captionEl.innerHTML = ''; captionEl.classList.remove('show'); return; }
+  captionEl.classList.add('show');
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  const tokens = [];
+  tmp.childNodes.forEach(n => {
+    const cls = n.nodeType === 1 ? n.className : '';
+    n.textContent.split(/\s+/).filter(Boolean).forEach(w => tokens.push({ w, cls }));
+  });
+  const tone = detectTone(tmp.textContent);
+  captionEl.innerHTML = '';
+  capQueue = { tokens, i: 0 };
+  capTimer = setInterval(() => {
+    if (paused) return;
+    if (!capQueue || capQueue.i >= tokens.length) {
+      if (capTimer) { clearInterval(capTimer); capTimer = null; }
+      capQueue = null; return;
+    }
+    const t = tokens[capQueue.i++];
+    const sp = document.createElement('span');
+    sp.className = 'capword' + (t.cls ? ' ' + t.cls : '');
+    sp.textContent = t.w;
+    captionEl.appendChild(sp);
+    captionEl.appendChild(document.createTextNode(' '));
+    AudioSys.mumble(tone, capQueue.i / tokens.length);
+  }, tone.rate);
+}
+function finishCaptionNow() {
+  if (!capTimer || !capQueue) return false;
+  clearInterval(capTimer); capTimer = null;
+  const tokens = capQueue.tokens;
+  for (let k = capQueue.i; k < tokens.length; k++) {
+    const sp = document.createElement('span');
+    if (tokens[k].cls) sp.className = tokens[k].cls;
+    sp.textContent = tokens[k].w;
+    captionEl.appendChild(sp);
+    captionEl.appendChild(document.createTextNode(' '));
+  }
+  capQueue = null;
+  return true;
+}
+function clearCaption() {
+  if (capTimer) { clearInterval(capTimer); capTimer = null; }
+  capQueue = null;
+  captionEl.innerHTML = '';
+}
 function startIntro() {
   INTRO.beat = 0; INTRO.t = 0; INTRO.portalR = 0; INTRO.flash = 0;
   INTRO.spin = 0; INTRO.suckT = 0; INTRO.kyleT = 0;
@@ -530,11 +702,13 @@ function startIntro() {
   mode = 'intro';
   document.body.classList.add('intro');
   introLayer.classList.add('show');
-  captionEl.classList.add('show');
+  requestAnimationFrame(() => requestAnimationFrame(() => introLayer.classList.add('fadein')));
   skipBtn.classList.add('show');
-  captionEl.innerHTML = BEATS[0].cap;
+  showCaption(BEATS[0].cap);
 }
 function enterGame() {
+  clearCaption();
+  introLayer.classList.remove('fadein');
   menuEl.classList.add('hidden');
   document.body.classList.remove('menu', 'intro');
   introLayer.classList.remove('show');
@@ -552,7 +726,7 @@ function nextBeat() {
   INTRO.beat++;
   INTRO.t = 0;
   if (INTRO.beat >= BEATS.length) { finishIntro(); return; }
-  captionEl.innerHTML = BEATS[INTRO.beat].cap;
+  showCaption(BEATS[INTRO.beat].cap);
   if (INTRO.beat === 2) AudioSys.sfx('lever');
   if (INTRO.beat === 5) AudioSys.sfx('portal');
   if (INTRO.beat === 6) AudioSys.sfx('whoosh');
@@ -627,8 +801,8 @@ function drawIntro(dt) {
     const bob = b === 4 ? Math.sin(bt * 2.2) * 4 : 0;
     const yOff = (1 - rise) * 70;
     const fV = INTRO.vSheet.idle[0], fH = INTRO.hSheet.idle[0];
-    drawSheetFrame(INTRO.vSheet.img, fV, wx - 78 + lean * 40 - 112 * rec, gy - 105 + yOff + bob + hop, 0.62, lean);
-    drawSheetFrame(INTRO.hSheet.img, fH, wx + 78 - lean * 40 + 112 * rec + tremble, gy - 105 + yOff - bob + hop, 0.62, -lean);
+    drawSheetFrame(INTRO.vSheet.img, fV, wx - 95 + lean * 44 - 140 * rec, gy + yOff + bob + hop, 0.95, lean);
+    drawSheetFrame(INTRO.hSheet.img, fH, wx + 95 - lean * 44 + 140 * rec + tremble, gy + yOff - bob + hop, 0.95, -lean);
     if (b === 4 && bt > 1.4) {
       for (let i = 0; i < 3; i++) {
         const hp = (bt - 1.4 - i * 0.55) / 1.7;
@@ -637,7 +811,7 @@ function drawIntro(dt) {
           ctx.globalAlpha = (1 - hp) * 0.9;
           ctx.font = '20px serif';
           ctx.textAlign = 'center';
-          ctx.fillText('\u2764', wx + (i - 1) * 16 - hp * 10, gy - 235 - hp * 75);
+          ctx.fillText('\u2764', wx + (i - 1) * 20 - hp * 12, gy - 258 - hp * 85);
           ctx.restore();
         }
       }
@@ -648,35 +822,50 @@ function drawIntro(dt) {
   if (b === 6) {
     INTRO.suckT += dt;
     const p = Math.min(1, INTRO.suckT / 2.4);
-    const ang = p * Math.PI * 5;
-    const rad = 80 * (1 - p);
-    const sx = wx - 190, sy = gy - 105;
-    const rx = sx + (wx - sx) * p + Math.cos(ang) * rad;
-    const ry = sy + (wy - sy) * p - Math.sin(p * Math.PI) * 45;
-    const s = 0.62 * (1 - p * 0.9);
+    const stut = Math.sin(p * 22) * 0.05 * (1 - p);
+    const pe = Math.min(1, Math.max(0, p + stut));
+    const ang = pe * Math.PI * 7;
+    const rad = 80 * (1 - pe);
+    const sx = wx - 220, sy = gy;
+    const strX = Math.sin(pe * 38) * 20 * (1 - pe);
+    const rx = sx + (wx - sx) * pe + Math.cos(ang) * rad + strX;
+    const ry = sy + (wy - sy) * pe - Math.sin(pe * Math.PI) * 45;
+    const pulse = 1 + Math.sin(pe * 30) * 0.09;
+    const s = 0.95 * (1 - pe * 0.9) * pulse;
     if (s > 0.03 && INTRO.vFall.naturalWidth) {
       const iw = INTRO.vFall.naturalWidth, ih = INTRO.vFall.naturalHeight;
       const dh = 240 * s, dw = dh * iw / ih;
       ctx.save();
       ctx.translate(rx, ry);
-      ctx.rotate(Math.sin(p * 14) * 0.12);
+      ctx.rotate(Math.sin(pe * 20) * 0.3);
       ctx.drawImage(INTRO.vFall, -dw / 2, -dh / 2, dw, dh);
       ctx.restore();
     }
-    if (INTRO.hReach.naturalWidth) drawIntroSprite(INTRO.hReach, wx + 190, gy - 105, 200, true);
+    if (INTRO.hReach.naturalWidth) drawIntroSprite(INTRO.hReach, wx + 220, gy - 150, 300, true);
     // leaves caught in the gust
     if (!INTRO.leaves.length) {
       const cols = ['#e8912d', '#c93a2e', '#e8b93c', '#7a9e3f', '#d4691e'];
       for (let i = 0; i < 26; i++) INTRO.leaves.push({
         a: Math.random() * 6.283, r: 60 + Math.random() * 120,
         sz: 5 + Math.random() * 7, col: cols[i % cols.length],
-        spin: Math.random() * 6.283, va: 1.6 + Math.random() * 2.6
+        spin: Math.random() * 6.283, va: 3.4 + Math.random() * 3.4,
+        seed: Math.random()
       });
     }
     for (const lf of INTRO.leaves) {
-      lf.a += dt * lf.va; lf.r = Math.max(24, lf.r - dt * 34); lf.spin += dt * 3;
+      lf.a += dt * lf.va; lf.spin += dt * 3;
+      const pB = Math.max(0, (p - 0.42) / 0.58);
+      const pBe = pB * pB * (3 - 2 * pB);
+      const rad = Math.min(W, H) * (0.42 + 0.1 * Math.sin(lf.seed * 7));
+      const ax = W / 2 + Math.cos(lf.a) * rad * 1.45;
+      const ay = H * 0.52 + Math.sin(lf.a) * rad * 0.9;
+      const rr = 230 * (1 - pBe) * (0.6 + 0.4 * Math.sin(lf.seed * 9));
+      const sxp = wx + Math.cos(lf.a * 2 + lf.seed) * rr;
+      const syp = wy + Math.sin(lf.a * 2 + lf.seed) * rr * 0.55 - 30 - pBe * 40;
+      const bx = ax * (1 - pBe) + sxp * pBe, by = ay * (1 - pBe) + syp * pBe;
       ctx.save();
-      ctx.translate(wx + Math.cos(lf.a) * lf.r, wy + Math.sin(lf.a) * lf.r * 0.55 - 30);
+      ctx.globalAlpha = Math.min(1, p * 6) * (1 - pBe * 0.35);
+      ctx.translate(bx, by);
       ctx.rotate(lf.spin);
       ctx.fillStyle = lf.col;
       ctx.beginPath(); ctx.ellipse(0, 0, lf.sz, lf.sz * 0.55, 0, 0, 6.283); ctx.fill();
@@ -699,18 +888,18 @@ function drawIntro(dt) {
     INTRO.kyleT += dt;
     const frames = INTRO.hSheet.walk;
     const runDur = 0.9, diveDur = 0.9;
-    const xStart = wx + 190;
+    const xStart = wx + 220;
     if (INTRO.kyleT < runDur) {
       const p = INTRO.kyleT / runDur;
       const f = frames[Math.floor(INTRO.kyleT * 14) % frames.length];
-      drawSheetFrame(INTRO.hSheet.img, f, xStart + ((wx + 60) - xStart) * p, gy - 105, 0.62, 0);
+      drawSheetFrame(INTRO.hSheet.img, f, xStart + ((wx + 70) - xStart) * p, gy, 0.95, 0);
     } else if (INTRO.kyleT < runDur + diveDur) {
       const p = (INTRO.kyleT - runDur) / diveDur;
-      const x0 = wx + 60, y0 = gy - 105;
+      const x0 = wx + 70, y0 = gy;
       const kx = x0 + (wx - x0) * p;
       const ky = y0 + (wy - y0) * p - Math.sin(p * Math.PI) * 60;
-      const s = 0.62 * (1 - p * 0.55);
-      if (s > 0.03 && INTRO.hDive.naturalWidth) drawIntroSprite(INTRO.hDive, kx, ky, 200 * s);
+      const s = 0.95 * (1 - p * 0.55);
+      if (s > 0.03 && INTRO.hDive.naturalWidth) drawIntroSprite(INTRO.hDive, kx, ky, 300 * s);
     }
   }
 
@@ -721,7 +910,11 @@ function drawIntro(dt) {
     ctx.fillRect(0, 0, W, H);
   }
 }
-introLayer.addEventListener('click', () => { if (mode === 'intro') nextBeat(); });
+introLayer.addEventListener('click', () => {
+  if (mode !== 'intro') return;
+  if (finishCaptionNow()) return;
+  nextBeat();
+});
 skipBtn.addEventListener('click', e => { e.stopPropagation(); finishIntro(); });
 document.getElementById('introBtn').addEventListener('click', () => { AudioSys.sfx('click'); startIntro(); });
 
@@ -903,6 +1096,12 @@ const AudioSys = {
   },
   buzz(ms) { // haptic where the device allows it
     try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {}
+  },
+  mumble(tone, prog) {
+    if (!this.ctx || this.muted || paused) return;
+    let f = tone.base + (Math.random() - 0.5) * 2 * tone.jit;
+    if (tone.rise) f *= 0.92 + prog * 0.3;
+    this.tone(f, 0.06, tone.type, 0.055, f * tone.slide);
   },
   startMusic(modeName) {
     const song = SONGS[modeName] || SONGS.street;
@@ -1131,6 +1330,7 @@ document.addEventListener('visibilitychange', () => setPaused(document.hidden));
 window.addEventListener('blur', () => setPaused(true));
 window.addEventListener('focus', () => setPaused(false));
 pauseOverlay.addEventListener('click', () => setPaused(false));
+document.getElementById('resumeSprite').addEventListener('click', e => { e.stopPropagation(); setPaused(false); });
 function frame(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
@@ -1138,6 +1338,14 @@ function frame(now) {
   if (paused) { requestAnimationFrame(frame); return; }
   if (mode === 'menu') { drawMenu(dt); requestAnimationFrame(frame); return; }
   if (mode === 'intro') { drawIntro(dt); requestAnimationFrame(frame); return; }
+
+  if (TRANS.active) {
+    updateTransition(dt);
+    drawPlayScene();
+    drawTransition();
+    requestAnimationFrame(frame);
+    return;
+  }
 
   const left = keys['ArrowLeft'] || keys['a'] || keys['A'] || touchLeft || (mouseDown && mouseDir === 'left');
   const right = keys['ArrowRight'] || keys['d'] || keys['D'] || touchRight || (mouseDown && mouseDir === 'right');
@@ -1164,6 +1372,12 @@ function frame(now) {
     player.stepT = 0;
   }
 
+  drawPlayScene();
+
+  requestAnimationFrame(frame);
+}
+
+function drawPlayScene() {
   const w = worldW();
   player.x = Math.max(60, Math.min(w - 60, player.x));
   let camX = Math.max(0, Math.min(w - W, player.x - W / 2));
@@ -1199,8 +1413,6 @@ function frame(now) {
   ctx.beginPath();
   ctx.ellipse(player.x - camX, groundY + 6, dw * 0.32, 10, 0, 0, Math.PI * 2);
   ctx.fill();
-
-  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 </script>
