@@ -242,6 +242,33 @@
   .weedbtns button { font-size:13px; font-weight:700; border:none; border-radius:999px;
     padding:8px 14px; cursor:pointer; background:#2d6a4f; color:#fff; }
   .weedbtns button.active { background:#d68c45; }
+  /* brass-ring carousel game */
+  #ringGame { position:fixed; inset:0; z-index:10; display:none;
+    align-items:center; justify-content:center; background:rgba(5,5,12,.78); }
+  #ringGame.open { display:flex; }
+  #ringCard { width:min(360px, 92vw); border-radius:18px; overflow:hidden; position:relative;
+    border:4px solid #ffd23f; box-shadow:0 12px 60px rgba(0,0,0,.7); background:#201510; }
+  #ringCard img.bg { width:100%; display:block; }
+  #ringArm { position:absolute; left:6%; right:6%; top:34%; height:10px; background:#8a5a2b;
+    border-radius:6px; box-shadow:0 2px 4px rgba(0,0,0,.5); }
+  #ringZone { position:absolute; left:62%; top:calc(34% - 34px); width:64px; height:88px; margin-left:-32px;
+    border:3px dashed #ffd23f; border-radius:12px; background:rgba(255,210,63,.12);
+    animation:zonePulse 1s ease-in-out infinite; }
+  @keyframes zonePulse { 50% { background:rgba(255,210,63,.30); } }
+  #ringRing { position:absolute; left:0; top:calc(34% - 26px); width:44px; height:44px; margin-left:-22px;
+    border-radius:50%; border:9px solid #c0c0c0; box-sizing:border-box;
+    box-shadow:0 3px 6px rgba(0,0,0,.5); }
+  #ringRing.brass { border-color:#ffd23f; box-shadow:0 0 14px #ffd23f; }
+  #ringRing.grabbed { animation:ringPop .35s ease-out; }
+  @keyframes ringPop { 40% { transform:scale(1.5); } 100% { transform:scale(1); } }
+  #ringScore { position:absolute; top:10px; left:0; right:0; text-align:center; color:#fff;
+    font-weight:800; font-size:16px; text-shadow:0 2px 4px #000; }
+  #ringTitle { position:absolute; bottom:10px; left:0; right:0; text-align:center; color:#ffd23f;
+    font-weight:800; font-size:14px; text-shadow:0 2px 4px #000; }
+  #ringClose { position:absolute; top:8px; right:8px; width:36px; height:36px; border-radius:50%;
+    border:none; background:rgba(0,0,0,.55); color:#fff; font-size:18px; cursor:pointer; }
+  #squirmy .berrytag { font-size:10px; font-weight:800; color:#7CFC00; text-align:center;
+    margin-top:2px; text-shadow:0 1px 2px #000; letter-spacing:1px; }
   #toast { position:fixed; left:50%; bottom:calc(110px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
     background:rgba(10,10,20,.9); color:#fff; padding:8px 18px; border-radius:999px;
     font-size:13px; z-index:20; display:none; }
@@ -279,7 +306,7 @@
   <button class="right" data-k="ArrowRight" aria-label="Right">▶</button>
 </div>
 <div id="doorPrompt"></div>
-<div id="squirmy"><div class="felisface" role="img" aria-label="Felis"></div><div id="sqBubble"></div></div>
+<div id="squirmy"><div class="felisface" role="img" aria-label="Felis"></div><div class="berrytag">🐾 BERRIES</div><div id="sqBubble"></div></div>
 <button id="introBtn" class="hudbtn" aria-label="Replay intro">🎬</button>
 <button id="muteBtn" class="hudbtn" aria-label="Mute">🔊</button>
 <div id="introLayer"></div>
@@ -341,6 +368,17 @@
     </div>
   </div>
 </div>
+<div id="ringGame">
+  <div id="ringCard">
+    <img class="bg" src="game-assets/logan-carousel-interior.jpg" alt="The Dentzel carousel">
+    <div id="ringScore">🎠 brass rings: 0</div>
+    <div id="ringArm"></div>
+    <div id="ringZone"></div>
+    <div id="ringRing"></div>
+    <div id="ringTitle">GRAB THE BRASS RING! tap when it&#8217;s gold</div>
+    <button id="ringClose" aria-label="Close">✕</button>
+  </div>
+</div>
 <div id="toast"></div>
 <div id="closeHint">tap outside the phone to close</div>
 <script>
@@ -394,6 +432,8 @@ const arcadeImg = new Image(); arcadeImg.src = 'game-assets/arcade.webp';
 const mallImg = new Image(); mallImg.src = 'game-assets/mall.webp';
 const signImg = new Image(); signImg.src = 'game-assets/sign.png';
 const grassImg = new Image(); grassImg.src = 'game-assets/grass-strip.webp';
+const theatreImg = new Image(); theatreImg.src = 'game-assets/logan-state-theatre-1984.jpg';
+const carouselImg = new Image(); carouselImg.src = 'game-assets/logan-carousel-1989.jpg';
 const fallHimImg = new Image(); fallHimImg.src = 'game-assets/fall-him.png';
 const fallHerImg = new Image(); fallHerImg.src = 'game-assets/fall-her.png';
 const diveHimImg = new Image(); diveHimImg.src = 'game-assets/dive-him.png';
@@ -415,8 +455,8 @@ const portalImgs = [1, 2, 3, 4].map(n => { const im = new Image(); im.src = 'gam
 const himImg = new Image(); himImg.src = 'game-assets/him.png';
 const herImg = new Image(); herImg.src = 'game-assets/her.png';
 SHEETS.him.img = himImg; SHEETS.her.img = herImg;
-const SCENE_IMG = { street: streetImg, arcade: arcadeImg, mall: mallImg };
-const SCENE_BG = { street: '#7ec8f7', arcade: '#2a1a3e', mall: '#3e2a1a' };
+const SCENE_IMG = { street: streetImg, arcade: arcadeImg, mall: mallImg, riverside: null };
+const SCENE_BG = { street: '#7ec8f7', arcade: '#2a1a3e', mall: '#3e2a1a', riverside: '#8fd8cf' };
 
 const player = { x: 400, vx: 0, dir: 1, moving: false, animT: 0, heightPx: 200 };
 let char = 'him';
@@ -494,12 +534,12 @@ document.getElementById('dpadToggle').addEventListener('click', () => {
 
 // scenes + doors
 function bgAspect(img) {
-  return (img.naturalWidth && img.naturalHeight) ? img.naturalWidth / img.naturalHeight : 16/9;
+  return (img && img.naturalWidth && img.naturalHeight) ? img.naturalWidth / img.naturalHeight : 16/9;
 }
 function worldW() {
   return Math.max(W, H * bgAspect(SCENE_IMG[scene]));
 }
-const DOORS = { arcade: [0.60, 0.70], mall: [0.80, 0.90] };
+const DOORS = { arcade: [0.60, 0.70], mall: [0.80, 0.90], riverside: [0.03, 0.10] };
 const doorPrompt = document.getElementById('doorPrompt');
 function doorAt() {
   const w = worldW(), zx = player.x / w;
@@ -574,6 +614,27 @@ function drawParallax(camX, w, dt) {
     g.addColorStop(1, 'rgba(255,220,150,0)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
+  } else if (scene === 'riverside') {
+    // the river: shimmering band with drifting sparkle
+    const ry = H * 0.60;
+    const rg = ctx.createLinearGradient(0, ry, 0, H);
+    rg.addColorStop(0, '#4f9fd0'); rg.addColorStop(1, '#2e6f9e');
+    ctx.fillStyle = rg; ctx.fillRect(0, ry, W, H - ry);
+    ctx.fillStyle = 'rgba(255,255,255,.22)';
+    for (let i = 0; i < 12; i++) {
+      const span = W + 160;
+      const wx = (((i * 211 + bgT * 40 - camX * 0.25) % span) + span) % span - 80;
+      const wy = ry + 14 + (i * 37) % Math.max(20, H - ry - 24);
+      ctx.fillRect(wx, wy, 26 + (i % 3) * 14, 3);
+    }
+    // willows along the bank
+    ctx.fillStyle = '#2f7a4e';
+    for (let i = 0; i < 6; i++) {
+      const span = w + 300;
+      const tx = (((i * 397 + 120 - camX * 0.6) % span) + span) % span - 150;
+      ctx.fillRect(tx - 5, ry - 70, 10, 70);
+      ctx.beginPath(); ctx.ellipse(tx, ry - 78, 46, 34, 0, 0, 6.283); ctx.fill();
+    }
   }
 }
 function drawMotes(camX, par, dt) {
@@ -644,8 +705,13 @@ function drawTransition() {
   }
   ctx.restore();
 }
+function nearCarousel() {
+  return scene === 'riverside' && Math.abs(player.x - worldW() * 0.55) < 130;
+}
 function tryEnter() {
-  if (scene !== 'street' || TRANS.active) return;
+  if (TRANS.active) return;
+  if (scene === 'riverside') { if (nearCarousel()) openRingGame(); return; }
+  if (scene !== 'street') return;
   const d = doorAt();
   if (d) {
     AudioSys.sfx('whoosh');
@@ -653,7 +719,8 @@ function tryEnter() {
       enteredFrom = d; scene = d; player.x = worldW() * 0.5; player.animT = 0;
       AudioSys.startMusic(d);
       if (d === 'arcade') squirmyTip('arcade', 'The arcade! Mullet Kart grudge matches go down here. Check the Events app on your phone!');
-      if (d === 'mall') squirmyTip('mall', 'The food court! Best chili dogs in the bizarro 90s. Probably.');
+      if (d === 'mall') squirmyTip('mall', 'BROKENSPORT Mall — Shears, JCPenny, and a fountain that gave up in \u201998.');
+      if (d === 'riverside') squirmyTip('riverside', 'Riverside Park! The old Dentzel carousel — grab the brass ring, win a free ride! 🎠');
     });
   }
 }
@@ -667,7 +734,12 @@ function tryExit() {
     player.x = worldW() * ((DOORS[d][0] + DOORS[d][1]) / 2); player.animT = 0;
   });
 }
-doorPrompt.addEventListener('click', () => { AudioSys.sfx('click'); scene === 'street' ? tryEnter() : tryExit(); });
+doorPrompt.addEventListener('click', () => {
+  AudioSys.sfx('click');
+  if (scene === 'street') tryEnter();
+  else if (scene === 'riverside' && nearCarousel()) openRingGame();
+  else tryExit();
+});
 
 // squirmy helper
 const squirmyEl = document.getElementById('squirmy');
@@ -707,6 +779,10 @@ const TOUR_LINES = {
   finale: "Home base, baby! Remember this spot. Now get out there and find each other. Word up! \uD83C\uDF2A\uFE0F",
 };
 const STAND_X = 620; // the stand site, on the street
+const THEATRE_X = 1150; // the old State Theatre (1984 photo)
+const DRIVEIN_X = 2360; // Brokenline Drive-In sign
+const COLE_X = 1420; // Cole's Hardwood sign
+const POSTER_X = 890; // Taste of Broken County poster
 let tour = null, tourStartX = 0, tourWeedPlayed = false;
 const tourBanner = document.getElementById('tourBanner');
 const tourObj = document.getElementById('tourObj');
@@ -1505,7 +1581,12 @@ const SONGS = {
             bass: [0,-1,-1,-1, -1,-1,-1,-1, 3,-1,-1,-1, -1,-1,-1,-1],
             lead: [-1,-1,-1,-1, 12,-1,-1,-1, -1,-1,-1,-1, -1,-1,15,-1],
             kick: [], hat: [],
-            arp: [-1,-1,7,-1, -1,-1,12,-1, -1,10,-1,-1, 7,-1,-1,-1], arpType: 'sine', arpVol: 0.028, arpOct: 4 } };
+            arp: [-1,-1,7,-1, -1,-1,12,-1, -1,10,-1,-1, 7,-1,-1,-1], arpType: 'sine', arpVol: 0.028, arpOct: 4 },
+  riverside: { bpm: 96, root: 130.8, bassType: 'sine', bassVol: 0.08, leadType: 'triangle', leadVol: 0.045,
+            bass: [0,-1,-1,-1, -1,-1,-1,-1, 5,-1,-1,-1, -1,-1,7,-1],
+            lead: [12,-1,-1,15, -1,-1,19,-1, -1,17,-1,15, -1,-1,12,-1],
+            kick: [0], hat: [4, 12],
+            arp: [12,-1,16,-1, 19,-1,16,-1, 12,-1,16,-1, 19,-1,24,-1], arpType: 'sine', arpVol: 0.03, arpOct: 4 } };
 function semi(root, st) { return root * Math.pow(2, st / 12); }
 const AudioSys = {
   ctx: null, muted: false, musicInt: null, mStep: 0, noiseBuf: null,
@@ -1800,6 +1881,78 @@ weedFlagBtn.addEventListener('click', () => {
 });
 weedNew();
 
+// ---- brass-ring carousel game (Riverside Park) ----
+const ringGame = document.getElementById('ringGame');
+const ringCard = document.getElementById('ringCard');
+const ringRing = document.getElementById('ringRing');
+const ringZone = document.getElementById('ringZone');
+const ringScoreEl = document.getElementById('ringScore');
+const RING_TOTAL = 12, RING_ZONE_X = 0.62;
+let ringState = null, ringLast = 0;
+function openRingGame() {
+  if (ringState && ringState.live) return;
+  ringState = { i: 0, score: 0, x: -0.08, brass: false, speed: 0.3, live: true };
+  ringScoreEl.textContent = '🎠 brass rings: 0';
+  ringGame.classList.add('open');
+  AudioSys.sfx('open');
+  nextRing();
+  ringLast = 0;
+  requestAnimationFrame(ringTick);
+}
+function nextRing() {
+  const s = ringState;
+  if (!s || !s.live) return;
+  if (s.i >= RING_TOTAL) { endRingGame(); return; }
+  s.i++;
+  s.brass = Math.random() < 0.45;
+  s.x = -0.08;
+  s.speed = 0.30 + s.i * 0.022;
+  ringRing.classList.toggle('brass', s.brass);
+  ringRing.style.left = (s.x * 100) + '%';
+}
+function ringTick(t) {
+  const s = ringState;
+  if (!s || !s.live) return;
+  const dt = Math.min(0.05, ringLast ? (t - ringLast) / 1000 : 0.016);
+  ringLast = t;
+  s.x += s.speed * dt;
+  if (s.x > 1.08) nextRing();
+  else ringRing.style.left = (s.x * 100) + '%';
+  if (s.live) requestAnimationFrame(ringTick);
+}
+function endRingGame() {
+  const s = ringState;
+  const n = s ? s.score : 0;
+  if (s) s.live = false;
+  ringGame.classList.remove('open');
+  AudioSys.sfx('win');
+  toast('🎠 ' + n + ' brass ring' + (n === 1 ? '' : 's') + ' — GRAB THE BRASS RING!');
+}
+function closeRingGame() {
+  if (ringState) ringState.live = false;
+  ringGame.classList.remove('open');
+  AudioSys.sfx('close');
+}
+ringCard.addEventListener('click', e => {
+  if (e.target.id === 'ringClose') return;
+  const s = ringState;
+  if (!s || !s.live) return;
+  const hw = 44 / ringCard.clientWidth;
+  if (Math.abs(s.x - RING_ZONE_X) < hw) {
+    if (s.brass) {
+      s.score++;
+      ringScoreEl.textContent = '🎠 brass rings: ' + s.score;
+      AudioSys.sfx('coin');
+      ringRing.classList.remove('grabbed'); void ringRing.offsetWidth; ringRing.classList.add('grabbed');
+    } else {
+      AudioSys.sfx('click');
+      toast('steel ring — not brass!');
+    }
+    nextRing();
+  }
+});
+document.getElementById('ringClose').addEventListener('click', e => { e.stopPropagation(); closeRingGame(); });
+
 // main loop
 let last = performance.now();
 
@@ -1868,6 +2021,15 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
+function anchorSign(x, name, flick) {
+  const gy = H * 0.84;
+  ctx.fillStyle = '#241f2e'; ctx.fillRect(x - 110, gy - 330, 220, 60);
+  ctx.strokeStyle = '#8e7cc3'; ctx.lineWidth = 3; ctx.strokeRect(x - 110, gy - 330, 220, 60);
+  const fl = flick && Math.sin(bgT * 7) > 0.2;
+  ctx.fillStyle = fl ? '#5a5470' : '#e8e4ff';
+  ctx.font = 'bold 30px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText(name, x, gy - 290);
+}
 function drawPlayScene(dt) {
   const w = worldW();
   player.x = Math.max(60, Math.min(w - 60, player.x));
@@ -1876,7 +2038,7 @@ function drawPlayScene(dt) {
   const img = SCENE_IMG[scene];
   ctx.fillStyle = SCENE_BG[scene];
   ctx.fillRect(0, 0, W, H);
-  if (img.naturalWidth) ctx.drawImage(img, -camX, 0, w, H);
+  if (img && img.naturalWidth) ctx.drawImage(img, -camX, 0, w, H);
   drawParallax(camX, w, dt);
 
   // welcome-to-BROKENSPORT sign at the town entrance
@@ -1895,12 +2057,93 @@ function drawPlayScene(dt) {
       STAND_X - camX - sw / 2, gy - sh, sw, sh);
   }
 
+  // the old State Theatre — the real 1984 facade
+  if (scene === 'street' && theatreImg.naturalWidth) {
+    const th = 250, tw = th * (theatreImg.naturalWidth / theatreImg.naturalHeight);
+    const gy = H * 0.84;
+    ctx.drawImage(theatreImg, THEATRE_X - camX - tw / 2, gy - th, tw, th);
+  }
+
+  // Brokenline Drive-In sign
+  if (scene === 'street') {
+    const sx = DRIVEIN_X - camX, gy = H * 0.84;
+    ctx.fillStyle = '#5a4a3a'; ctx.fillRect(sx - 6, gy - 190, 12, 190);
+    ctx.fillStyle = '#1c1c28'; ctx.fillRect(sx - 95, gy - 320, 190, 140);
+    ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 4; ctx.strokeRect(sx - 95, gy - 320, 190, 140);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffd23f'; ctx.font = 'bold 22px system-ui';
+    ctx.fillText('BROKENLINE', sx, gy - 268);
+    ctx.fillStyle = '#ff5fa2'; ctx.font = 'bold 26px system-ui';
+    ctx.fillText('DRIVE-IN', sx, gy - 238);
+    ctx.fillStyle = '#0e0e16'; ctx.fillRect(sx - 70, gy - 150, 140, 80);
+    ctx.fillStyle = 'rgba(160,200,255,.25)'; ctx.fillRect(sx - 70, gy - 150, 140, 80);
+  }
+
+  // Cole's Hardwood — scorched sign
+  if (scene === 'street') {
+    const sx = COLE_X - camX, gy = H * 0.84;
+    ctx.fillStyle = '#4a3220'; ctx.fillRect(sx - 4, gy - 96, 8, 96);
+    ctx.fillStyle = '#6b4a2f'; ctx.fillRect(sx - 65, gy - 132, 130, 38);
+    ctx.fillStyle = '#2b1c10'; ctx.fillRect(sx - 65, gy - 132, 130, 7);
+    ctx.fillStyle = '#f5e6c8'; ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText("COLE'S HARDWOOD", sx, gy - 107);
+  }
+
+  // Taste of Broken County poster at the stand site
+  if (scene === 'street') {
+    const sx = POSTER_X - camX, gy = H * 0.84;
+    ctx.fillStyle = '#4a3220'; ctx.fillRect(sx - 4, gy - 130, 8, 130);
+    ctx.fillStyle = '#fdf6ec'; ctx.fillRect(sx - 62, gy - 210, 124, 86);
+    ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 4; ctx.strokeRect(sx - 62, gy - 210, 124, 86);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#c0392b'; ctx.font = 'bold 11px system-ui';
+    ctx.fillText('TASTE OF', sx, gy - 188);
+    ctx.fillText('BROKEN COUNTY', sx, gy - 174);
+    ctx.fillStyle = '#333'; ctx.font = '11px system-ui';
+    ctx.fillText('chili cookoff • AUG', sx, gy - 158);
+    ctx.fillText('🌭', sx, gy - 140);
+  }
+
+  // BROKENSPORT Mall: dying-mall dressing
+  if (scene === 'mall') {
+    const gy = H * 0.84;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#2c2c4a'; ctx.fillRect(W / 2 - 170, 26, 340, 52);
+    ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 3; ctx.strokeRect(W / 2 - 170, 26, 340, 52);
+    ctx.fillStyle = '#ffd23f'; ctx.font = 'bold 24px system-ui';
+    ctx.fillText('BROKENSPORT MALL', W / 2, 60);
+    anchorSign(w * 0.22 - camX, 'SHEARS', true);
+    anchorSign(w * 0.78 - camX, 'JCPENNY', false);
+    // the dry fountain
+    const fx = w * 0.62 - camX;
+    ctx.fillStyle = '#9aa3b2'; ctx.beginPath(); ctx.ellipse(fx, gy - 20, 90, 26, 0, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#7c8494'; ctx.beginPath(); ctx.ellipse(fx, gy - 26, 70, 18, 0, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#9aa3b2'; ctx.fillRect(fx - 10, gy - 110, 20, 90);
+    ctx.fillStyle = '#b9c0cc'; ctx.beginPath(); ctx.ellipse(fx, gy - 112, 34, 10, 0, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#5a4a3a'; ctx.fillRect(fx - 55, gy - 62, 110, 26);
+    ctx.fillStyle = '#f5e6c8'; ctx.font = 'bold 10px system-ui';
+    ctx.fillText('OUT OF ORDER SINCE 1998', fx, gy - 44);
+  }
+
+  // Riverside Park: the Dentzel carousel — the real 1989 photo
+  if (scene === 'riverside' && carouselImg.naturalWidth) {
+    const ch = 300, cw = ch * (carouselImg.naturalWidth / carouselImg.naturalHeight);
+    const gy = H * 0.84;
+    ctx.drawImage(carouselImg, w * 0.55 - camX - cw / 2, gy - ch, cw, ch);
+    ctx.fillStyle = 'rgba(0,0,0,.30)'; ctx.font = 'bold 13px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('🎠 the Dentzel carousel', w * 0.55 - camX, gy + 18);
+  }
+
   // door prompt
   if (scene === 'street') {
     const d = doorAt();
     if (d === 'arcade') { doorPrompt.textContent = '▲ enter the arcade'; doorPrompt.classList.add('show'); }
-    else if (d === 'mall') { doorPrompt.textContent = '▲ enter the mall'; doorPrompt.classList.add('show'); }
+    else if (d === 'mall') { doorPrompt.textContent = '▲ BROKENSPORT Mall'; doorPrompt.classList.add('show'); }
+    else if (d === 'riverside') { doorPrompt.textContent = '▲ Riverside Park'; doorPrompt.classList.add('show'); }
     else doorPrompt.classList.remove('show');
+  } else if (scene === 'riverside' && nearCarousel()) {
+    doorPrompt.textContent = '🎠 grab the brass ring!';
+    doorPrompt.classList.add('show');
   } else {
     doorPrompt.textContent = '▼ back to the street';
     doorPrompt.classList.add('show');
