@@ -474,6 +474,7 @@ const rinkImg = new Image(); rinkImg.src = 'game-assets/rink-v3.webp';
 const bowlImg = new Image(); bowlImg.src = 'game-assets/bowl-v3.webp';
 const bowlLanesImg = new Image(); bowlLanesImg.src = 'game-assets/bowl-lanes.webp';
 const mallFoodCourtImg = new Image(); mallFoodCourtImg.src = 'game-assets/mall-food-court.webp';
+const mallCorridorImg = new Image(); mallCorridorImg.src = 'game-assets/mall-corridor.webp';
 const highImg = new Image(); highImg.src = 'game-assets/highschool-v3.webp';
 const felisSheetImg = new Image(); felisSheetImg.src = 'game-assets/felis-idle-sheet.webp';
 const fallHimImg = new Image(); fallHimImg.src = 'game-assets/fall-him.png';
@@ -512,8 +513,8 @@ SHEETS.him.frontWalkImg = himFrontWalkImg;
 SHEETS.her.frontWalkImg = herFrontWalkImg;
 SHEETS.him.qImg = him34Img;
 SHEETS.her.qImg = her34Img;
-const SCENE_IMG = { street: streetImg, arcade: arcadeImg, mall: mallImg, riverside: null, bowl: bowlLanesImg, foodcourt: mallFoodCourtImg };
-const SCENE_BG = { street: '#7ec8f7', arcade: '#2a1a3e', mall: '#3e2a1a', riverside: '#8fd8cf', bowl: '#241a30', foodcourt: '#4a3626' };
+const SCENE_IMG = { street: streetImg, arcade: arcadeImg, mall: mallImg, riverside: null, bowl: bowlLanesImg, foodcourt: mallFoodCourtImg, corridor: mallCorridorImg };
+const SCENE_BG = { street: '#7ec8f7', arcade: '#2a1a3e', mall: '#3e2a1a', riverside: '#8fd8cf', bowl: '#241a30', foodcourt: '#4a3626', corridor: '#3a2a20' };
 
 const player = { x: 400, vx: 0, dir: 1, moving: false, animT: 0, heightPx: 200 };
 // Felis follows the player through the world (drawn in-canvas, not a corner HUD)
@@ -619,7 +620,7 @@ function worldW() {
   return Math.max(W, H * bgAspect(SCENE_IMG[scene]));
 }
 const DOORS = { mall: [0.84, 0.92], riverside: [0.03, 0.10], bowl: [0.68, 0.74] };
-const MALL_DOORS = { arcade: [0.30, 0.42], foodcourt: [0.62, 0.74] };
+const MALL_DOORS = { arcade: [0.30, 0.42], foodcourt: [0.62, 0.74], corridor: [0.02, 0.10] };
 const doorPrompt = document.getElementById('doorPrompt');
 let promptAction = null; // 'enter' | 'exit' | 'ring' | 'take' | 'build'
 function doorAt() {
@@ -693,7 +694,7 @@ function drawParallax(camX, w, dt) {
       ctx.fillRect(nx - nr, ny - nr, nr * 2, nr * 2);
     }
     drawMotes(camX, 0.5, dt);
-  } else if (scene === 'mall' || scene === 'foodcourt') {
+  } else if (scene === 'mall' || scene === 'foodcourt' || scene === 'corridor') {
     // warm floating dust in the food-court light
     drawMotes(camX, 0.35, dt);
     const g = ctx.createRadialGradient(W / 2, H * 0.3, 20, W / 2, H * 0.3, W * 0.5);
@@ -2597,6 +2598,14 @@ function drawPlayScene(dt) {
       ctx.fillStyle = '#ff9d5c'; ctx.font = 'bold 11px system-ui';
       ctx.fillText('🍔', ex, gy + 20);
     }
+    // corridor doorway (far west end)
+    {
+      const ex = w * 0.06 - camX;
+      ctx.fillStyle = '#141008'; ctx.fillRect(ex - 45, gy - 170, 90, 170);
+      ctx.strokeStyle = '#8e7cc3'; ctx.lineWidth = 4; ctx.strokeRect(ex - 45, gy - 170, 90, 170);
+      ctx.fillStyle = '#8e7cc3'; ctx.font = 'bold 14px system-ui';
+      ctx.fillText('CORRIDOR', ex, gy - 182);
+    }
   }
 
   // Riverslide Park: the Mental Carousel pavilion + escaped zany animals
@@ -2640,6 +2649,14 @@ function drawPlayScene(dt) {
     ctx.fillStyle = '#ffd23f'; ctx.font = 'bold 22px system-ui';
     ctx.fillText('FOOD COURT', W / 2, 50);
   }
+  // corridor: dim hallway sign
+  if (scene === 'corridor') {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#1a1410'; ctx.fillRect(W / 2 - 110, 20, 220, 40);
+    ctx.strokeStyle = '#8e7cc3'; ctx.lineWidth = 3; ctx.strokeRect(W / 2 - 110, 20, 220, 40);
+    ctx.fillStyle = '#8e7cc3'; ctx.font = 'bold 20px system-ui';
+    ctx.fillText('CORRIDOR', W / 2, 48);
+  }
 
   // Meyers Snort Hole interior: neon name sign over the lanes
   if (scene === 'bowl') {    ctx.textAlign = 'center';
@@ -2676,10 +2693,11 @@ function drawPlayScene(dt) {
     const pk = partAt();
     if (md === 'arcade') { doorPrompt.textContent = '▲ The Okay Space'; promptAction = 'enter'; }
     else if (md === 'foodcourt') { doorPrompt.textContent = '▲ Food Court 🍔'; promptAction = 'enter'; }
+    else if (md === 'corridor') { doorPrompt.textContent = '▲ Corridor'; promptAction = 'enter'; }
     else if (pk) { doorPrompt.textContent = '✋ take the ' + PART_INFO[pk].label; promptAction = 'take'; }
     else { doorPrompt.textContent = '▼ back to the street'; promptAction = 'exit'; }
     doorPrompt.classList.add('show');
-  } else if (scene === 'arcade' || scene === 'foodcourt') {
+  } else if (scene === 'arcade' || scene === 'foodcourt' || scene === 'corridor') {
     doorPrompt.textContent = '▼ back to the mall'; doorPrompt.classList.add('show'); promptAction = 'exit';
   } else if (scene === 'bowl') {
     if (nearLane()) { doorPrompt.textContent = '🎳 bowl a frame!'; promptAction = 'bowl'; }
