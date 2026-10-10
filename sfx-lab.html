@@ -18,6 +18,7 @@
   button:active { transform:scale(.96); background:#2e2e4a; }
   button small { display:block; font-size:11px; font-weight:400; color:#bdbde0; margin-top:4px; }
   .cur { outline:2px dashed #5fd97a; outline-offset:-6px; }
+  .picked { outline:3px solid #ffd23f !important; outline-offset:-6px; }
   .opt { flex:1; display:flex; gap:4px; }
   .opt button:first-child { flex:1; }
   .copy { flex:0 0 auto !important; padding:14px 10px !important; font-size:15px !important; }
@@ -26,8 +27,11 @@
 <body>
 <h1>🔊 SFX Lab</h1>
 <p class="hint">Tap each variant to hear it. Variant <b>A</b> (green outline) is what's in the game now.
-Tap a letter to <b>play</b> it, tap <b>📋</b> to <b>copy</b> that pick, then paste them to me like <b>"portal B, whoosh C"</b> and I'll wire them in.</p>
+Tapping a letter <b>plays</b> it and marks it as your pick (yellow outline) for that sound.
+Every sound below has exactly one job &mdash; its assignment is under its name, including sounds reserved for features still to come.
+Tap <b>📋</b> to copy one pick, or use <b>📋 Copy all picks</b> at the bottom, then paste them to me like <b>"portal B, whoosh C"</b>.</p>
 <div id="lab"></div>
+<button id="copyAll" style="width:100%;margin:18px 0 40px;">📋 Copy all picks</button>
 <script>
 let AC = null, noiseBuf = null;
 function ac() {
@@ -75,7 +79,7 @@ const SFX = {
     A: () => tone(900, 0.4, 'sawtooth', 0.12, 150),
     B: () => { tone(700, 0.5, 'sine', 0.14, 100); tone(350, 0.5, 'sine', 0.08, 90, 0.05); },
     C: () => tone(500, 0.35, 'square', 0.1, 80) } },
-  pop: { desc: 'Pickups, small wins', v: {
+  pop: { desc: 'TamaGotcha feeding', v: {
     A: () => tone(520, 0.12, 'sine', 0.12, 940),
     B: () => tone(400, 0.08, 'square', 0.12, 800),
     C: () => { tone(520, 0.08, 'sine', 0.12); tone(780, 0.1, 'sine', 0.12, null, 0.07); } } },
@@ -103,13 +107,63 @@ const SFX = {
     A: () => tone(82, 0.09, 'sine', 0.11, 55),
     B: () => noise(0.06, 0.1, 900, 300),
     C: () => tone(120, 0.07, 'triangle', 0.1, 70) } },
+  open: { desc: 'Phone + apps opening', v: {
+    A: () => { tone(440, 0.09, 'square', 0.1); tone(660, 0.1, 'square', 0.1, null, 0.08); },
+    B: () => tone(520, 0.08, 'sine', 0.12, 880),
+    C: () => { noise(0.12, 0.1, 800, 4000); tone(880, 0.08, 'sine', 0.1, null, 0.06); } } },
+  close: { desc: 'Phone + apps closing', v: {
+    A: () => { tone(660, 0.09, 'square', 0.1); tone(440, 0.1, 'square', 0.1, null, 0.08); },
+    B: () => tone(700, 0.08, 'sine', 0.12, 350),
+    C: () => { tone(880, 0.06, 'sine', 0.1, 440); noise(0.1, 0.08, 3000, 800, 0.05); } } },
+  tick: { desc: 'D-pad presses', v: {
+    A: () => tone(880, 0.05, 'square', 0.06),
+    B: () => tone(1200, 0.04, 'sine', 0.1),
+    C: () => noise(0.04, 0.1, 5000, 2000) } },
+  flag: { desc: 'WEEDSWEEPER flag plants', v: {
+    A: () => tone(420, 0.07, 'square', 0.1),
+    B: () => { tone(420, 0.06, 'square', 0.1); tone(560, 0.08, 'square', 0.1, null, 0.06); },
+    C: () => { noise(0.05, 0.12, 2000, 800); tone(500, 0.07, 'triangle', 0.1, null, 0.04); } } },
+  textIn: { desc: 'Incoming texts (chat + BAM)', v: {
+    A: () => { tone(760, 0.07, 'sine', 0.11); tone(1010, 0.1, 'sine', 0.09, null, 0.07); },
+    B: () => tone(880, 0.09, 'sine', 0.12, 1180),
+    C: () => [660, 880, 1100].forEach((f, i) => tone(f, 0.07, 'sine', 0.1, null, i * 0.06)) } },
+  textOut: { desc: 'Outgoing texts', v: {
+    A: () => tone(540, 0.1, 'sine', 0.09, 920),
+    B: () => tone(600, 0.07, 'square', 0.08, 900),
+    C: () => noise(0.12, 0.08, 1500, 4500) } },
+  dig: { desc: 'WEEDSWEEPER cell reveals', v: {
+    A: () => { noise(0.09, 0.13, 900, 250); tone(140, 0.1, 'sine', 0.12, 70); },
+    B: () => tone(300, 0.08, 'square', 0.1, 150),
+    C: () => { noise(0.14, 0.1, 600, 1800); tone(200, 0.08, 'triangle', 0.08, 120, 0.05); } } },
+  boing: { desc: 'TamaGotcha playing', v: {
+    A: () => { tone(280, 0.22, 'sine', 0.12, 640); tone(640, 0.16, 'sine', 0.08, 300, 0.1); },
+    B: () => { tone(400, 0.12, 'triangle', 0.12, 800); tone(800, 0.1, 'triangle', 0.1, 400, 0.1); },
+    C: () => [523, 659, 784].forEach((f, i) => tone(f, 0.09, 'sine', 0.1, null, i * 0.07)) } },
+  coin: { desc: 'Pickups + currency (planned)', v: {
+    A: () => { tone(988, 0.08, 'square', 0.09); tone(1319, 0.28, 'square', 0.09, null, 0.08); },
+    B: () => [880, 1175, 1568].forEach((f, i) => tone(f, 0.1, 'sine', 0.1, null, i * 0.06)),
+    C: () => { tone(1568, 0.2, 'triangle', 0.1); tone(2093, 0.25, 'sine', 0.07, null, 0.05); } } },
+  horn: { desc: 'Mullet Kart 64 race start (planned)', v: {
+    A: () => { tone(233, 0.5, 'square', 0.1); tone(175, 0.5, 'square', 0.1); },
+    B: () => [196, 247, 294].forEach(f => tone(f, 0.4, 'sawtooth', 0.06)),
+    C: () => { tone(440, 0.15, 'square', 0.12); tone(440, 0.15, 'square', 0.12, null, 0.2); tone(880, 0.4, 'square', 0.12, null, 0.4); } } },
+  thud: { desc: 'Mall Brawl hits (planned)', v: {
+    A: () => { tone(95, 0.16, 'sine', 0.16, 40); noise(0.1, 0.12, 500, 120); },
+    B: () => tone(70, 0.2, 'square', 0.12, 35),
+    C: () => { noise(0.16, 0.14, 350, 90); tone(120, 0.12, 'triangle', 0.1, 50, 0.02); } } },
+  ring: { desc: 'Incoming calls (planned)', v: {
+    A: () => { tone(440, 0.35, 'sine', 0.1); tone(480, 0.35, 'sine', 0.1); tone(440, 0.35, 'sine', 0.1, null, 0.55); tone(480, 0.35, 'sine', 0.1, null, 0.55); },
+    B: () => { tone(880, 0.3, 'triangle', 0.1); tone(880, 0.3, 'triangle', 0.1, null, 0.5); },
+    C: () => [660, 660, 880].forEach((f, i) => tone(f, 0.12, 'square', 0.08, null, i * 0.16)) } },
 };
 const lab = document.getElementById('lab');
 for (const [name, sfx] of Object.entries(SFX)) {
   const div = document.createElement('div');
   div.className = 'sfx';
   const notes = { click: 'short + clicky', whoosh: 'airy sweep', dive: 'falling pitch', pop: 'bright blip',
-    portal: 'big + eerie', lever: 'mechanical clunk', shimmer: 'sparkly', win: 'happy arp', lose: 'sad slide', step: 'soft thud' };
+    portal: 'big + eerie', lever: 'mechanical clunk', shimmer: 'sparkly', win: 'happy arp', lose: 'sad slide', step: 'soft thud',
+    open: 'phone opens', close: 'phone closes', tick: 'd-pad blip', flag: 'flag plant', textIn: 'message arrives',
+    textOut: 'message sent', dig: 'digging', boing: 'bouncy', coin: 'cha-ching', horn: 'race horn', thud: 'heavy hit', ring: 'ringing' };
   let btns = '';
   for (const [v] of Object.entries(sfx.v))
     btns += `<div class="opt"><button data-sfx="${name}" data-v="${v}" class="${v === 'A' ? 'cur' : ''}">${v}<small>${notes[name]}</small></button><button class="copy" data-copy="${name} ${v}" title="Copy this pick">\uD83D\uDCCB</button></div>`;
@@ -128,6 +182,18 @@ lab.addEventListener('click', e => {
   const b = e.target.closest('button[data-sfx]');
   if (!b) return;
   SFX[b.dataset.sfx].v[b.dataset.v]();
+  const card = b.closest('.sfx');
+  card.querySelectorAll('button[data-sfx]').forEach(x => x.classList.remove('picked'));
+  b.classList.add('picked');
+  picks[b.dataset.sfx] = b.dataset.v;
+});
+const picks = {};
+document.getElementById('copyAll').addEventListener('click', function() {
+  const codes = Object.keys(SFX).map(n => n + ' ' + (picks[n] || 'A')).join(', ');
+  const done = () => { this.textContent = '\u2713 Copied: ' + codes; setTimeout(() => this.textContent = '\uD83D\uDCCB Copy all picks', 2500); };
+  if (navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(codes).then(done).catch(done);
+  else done();
 });
 </script>
 </body>

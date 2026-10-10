@@ -1250,6 +1250,12 @@ const AudioSys = {
       case 'pop': this.tone(520, 0.12, 'sine', 0.14, 940); break;
       case 'textIn': this.tone(760, 0.07, 'sine', 0.11); this.tone(1010, 0.1, 'sine', 0.09, null, 0.07); break;
       case 'textOut': this.tone(540, 0.1, 'sine', 0.09, 920); break;
+      case 'dig': this.tone(140, 0.12, 'sine', 0.14, 70); this.hat(0.05); break;
+      case 'boing': this.tone(280, 0.22, 'sine', 0.12, 640); this.tone(640, 0.16, 'sine', 0.08, 300, 0.1); break;
+      case 'coin': this.tone(988, 0.08, 'square', 0.08); this.tone(1319, 0.28, 'square', 0.08, null, 0.08); break;
+      case 'horn': this.tone(233, 0.5, 'square', 0.09); this.tone(175, 0.5, 'square', 0.09); break;
+      case 'thud': this.tone(95, 0.16, 'sine', 0.16, 40); this.hat(0.06); break;
+      case 'ring': this.tone(440, 0.35, 'sine', 0.09); this.tone(480, 0.35, 'sine', 0.09); this.tone(440, 0.35, 'sine', 0.09, null, 0.55); this.tone(480, 0.35, 'sine', 0.09, null, 0.55); break;
       case 'flag': this.tone(420, 0.07, 'square', 0.1); break;
       case 'portal': this.tone(70, 1.2, 'sawtooth', 0.12, 320); this.tone(140, 1.2, 'triangle', 0.08, 640); break;
       case 'lever': this.tone(130, 0.18, 'square', 0.12, 55); this.tone(660, 0.5, 'sine', 0.06, 1320); break;
@@ -1379,7 +1385,7 @@ document.getElementById('feedBtn').addEventListener('click', () => {
   pet.hunger = Math.min(100, pet.hunger + 25); petUI();
 });
 document.getElementById('playBtn').addEventListener('click', () => {
-  AudioSys.sfx('pop');
+  AudioSys.sfx('boing');
   pet.happiness = Math.min(100, pet.happiness + 25); petUI();
 });
 setInterval(() => {
@@ -1435,7 +1441,7 @@ function weedReveal(i) {
       }
     }
   }
-  AudioSys.sfx('tick');
+  AudioSys.sfx('dig');
   if (wOpen.size === WN * WN - WCOUNT) {
     wOver = true;
     AudioSys.sfx('win');
