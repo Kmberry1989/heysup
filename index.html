@@ -754,14 +754,15 @@ function buildBeats() {
   const heroName = heroIsHim ? 'Kyle' : 'Rochelle';
   const victimName = heroIsHim ? 'Rochelle' : 'Kyle';
   const heroPro = heroIsHim ? 'He' : 'She';
+  const who = n => "<span class='who'>" + n + ":</span> ";
   return [
-    { dur: 3.4, cap: "Inside the stand &mdash; shaking off the dust." },
-    { dur: 3.4, cap: "Every shelf. Every surface. Tonight&rsquo;s the night." },
-    { dur: 4.2, cap: "" },
-    { dur: 3.2, cap: "Kokomo. Friday night. They crank open the back bathroom window for business." },
-    { dur: 4.4, cap: "<span class='who'>" + victimName + ":</span> &ldquo;Chili dogs are on.&rdquo; <span class='who'>" + heroName + ":</span> &ldquo;Lights on &mdash; we&rsquo;re OPEN.&rdquo;" },
-    { dur: 3.0, cap: "The OPEN sign flickers&hellip; and the night tears open." },
-    { dur: 4.2, cap: "<span class='who'>" + heroName + ":</span> &ldquo;" + victimName.toUpperCase() + "!!&rdquo;" },
+    { dur: 3.4, cap: "I can&rsquo;t believe it&rsquo;s actually happening&hellip;" },
+    { dur: 3.4, cap: "Almost ready, just a little bit more&hellip;" },
+    { dur: 4.2, cap: who(heroName) + "&ldquo;Let&rsquo;s do it, babes!&rdquo;" },
+    { dur: 3.2, cap: who(heroName) + "&ldquo;IT&rsquo;S SHOWTIME!&rdquo;" },
+    { dur: 4.4, cap: who(victimName) + "&ldquo;This wouldn&rsquo;t have even been possible without you&hellip;&rdquo; " + who(heroName) + "&ldquo;You feel that too&hellip; right?&rdquo;" },
+    { dur: 3.0, cap: who(heroName) + "&ldquo;The window &mdash; LOOK OUT!!&rdquo;" },
+    { dur: 4.2, cap: who(heroName) + "&ldquo;NO! HOLD ON, " + victimName.toUpperCase() + "!&rdquo;" },
     { dur: 3.4, cap: heroName + " doesn&rsquo;t think. " + heroPro + " dives." },
     { dur: 2.8, cap: "BROKENSPORT&hellip; stuck in the 90s." }
   ];
