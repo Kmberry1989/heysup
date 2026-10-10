@@ -92,6 +92,20 @@
   .char-card span { font-size:13px; font-weight:800; }
   .char-card.selected { border-color:#ffd23f; background:rgba(255,210,63,.15);
     box-shadow:0 0 14px rgba(255,210,63,.5); }
+  .char-card { position:relative; }
+  .char-card .badge { position:absolute; top:-16px; right:-16px; width:46px; height:46px;
+    border-radius:50%; background:#5fd97a; color:#06240f; font-size:26px; font-weight:900;
+    display:flex; align-items:center; justify-content:center; transform:scale(0);
+    box-shadow:0 0 16px rgba(95,217,122,.8); }
+  .char-card.confirming { border-color:#5fd97a; background:rgba(95,217,122,.14);
+    animation:cardConfirm 2.1s ease forwards; }
+  .char-card.confirming .badge { animation:badgePop .45s cubic-bezier(.2,1.6,.4,1) .15s forwards; }
+  .char-card.dim { opacity:.3; filter:grayscale(.6); transition:opacity .4s ease; }
+  @keyframes badgePop { to { transform:scale(1); } }
+  @keyframes cardConfirm { 0% { box-shadow:0 0 0 rgba(95,217,122,0); transform:scale(1); }
+    25% { box-shadow:0 0 26px rgba(95,217,122,.9); transform:scale(1.06); }
+    60% { box-shadow:0 0 18px rgba(95,217,122,.7); transform:scale(1.03); }
+    100% { box-shadow:0 0 30px rgba(95,217,122,1); transform:scale(1.05); } }
   body.menu #hud, body.menu .hudbtn, body.menu #dpad, body.menu #squirmy { display:none !important; }
   /* splash */
   #splash { position:fixed; inset:0; z-index:60; background:#0b0b12; cursor:pointer;
@@ -269,12 +283,8 @@
   <div class="menu-title">hey, sup?</div>
   <canvas id="menuCanvas" width="420" height="170"></canvas>
   <div class="char-select">
-    <button id="selHim" class="char-card"><canvas id="portHim" width="90" height="110"></canvas><span>Kyle</span></button>
-    <button id="selHer" class="char-card"><canvas id="portHer" width="90" height="110"></canvas><span>Rochelle</span></button>
-  </div>
-  <div class="menu-btns">
-    <button id="startBtn">▶ Start</button>
-    <button id="introMenuBtn">🎬 Intro</button>
+    <button id="selHim" class="char-card"><canvas id="portHim" width="90" height="110"></canvas><span>Kyle</span><span class="badge">✓</span></button>
+    <button id="selHer" class="char-card"><canvas id="portHer" width="90" height="110"></canvas><span>Rochelle</span><span class="badge">✓</span></button>
   </div>
   <div class="menu-note">choose your hero &mdash; they&rsquo;re the one who dives in 🌪️</div>
 </div>
@@ -881,7 +891,7 @@ function clearCaption() {
   capQueue = null;
   captionEl.innerHTML = '';
 }
-function startIntro() {
+function startIntro(opts) {
   INTRO.beat = 0; INTRO.t = 0; INTRO.portalR = 0; INTRO.flash = 0;
   INTRO.spin = 0; INTRO.suckT = 0; INTRO.kyleT = 0;
   BEATS = buildBeats();
@@ -895,7 +905,7 @@ function startIntro() {
   document.body.classList.add('intro');
   introLayer.classList.add('show');
   requestAnimationFrame(() => requestAnimationFrame(() => introLayer.classList.add('fadein')));
-  skipBtn.classList.add('show');
+  if (!opts || !opts.noSkip) skipBtn.classList.add('show');
   showCaption(BEATS[0].cap);
 }
 function enterGame() {
@@ -1091,7 +1101,7 @@ function drawIntro(dt) {
       const kx = x0 + (wx - x0) * p;
       const ky = y0 + (wy - y0) * p - Math.sin(p * Math.PI) * 60;
       const s = 0.95 * (1 - p * 0.55);
-      if (s > 0.03 && INTRO.hDive.naturalWidth) drawIntroSprite(INTRO.hDive, kx, ky, 300 * s);
+      if (s > 0.03 && INTRO.hDive.naturalWidth) drawIntroSprite(INTRO.hDive, kx, ky, 300 * s, true);
     }
   }
 
@@ -1145,18 +1155,6 @@ function drawMenu(dt) {
     drawAvatar(mctx, S.img, animFrame(S, av), av.x, gy, 100, av.dir);
   }
 }
-document.getElementById('startBtn').addEventListener('click', () => {
-  AudioSys.init(); AudioSys.sfx('click');
-  let seen = false;
-  try { seen = !!localStorage.getItem('heysup_intro'); } catch (e) {}
-  if (!seen) startIntro(); else enterGame();
-});
-document.getElementById('introMenuBtn').addEventListener('click', () => {
-  AudioSys.init(); AudioSys.sfx('click');
-  menuEl.classList.add('hidden');
-  document.body.classList.remove('menu');
-  startIntro();
-});
 const muteBtn = document.getElementById('muteBtn');
 muteBtn.addEventListener('click', () => {
   AudioSys.init();
@@ -1174,12 +1172,25 @@ function drawCardPortrait(canvasId, img) {
   x.clearRect(0, 0, c.width, c.height);
   x.drawImage(img, (c.width - dw) / 2, (c.height - dh) / 2, dw, dh);
 }
+let confirming = false;
 function selectChar(c) {
+  if (confirming || mode !== 'menu') return;
+  confirming = true;
   char = c;
   try { localStorage.setItem('heysup_char', c); } catch (e) {}
-  document.getElementById('selHim').classList.toggle('selected', c === 'him');
-  document.getElementById('selHer').classList.toggle('selected', c === 'her');
-  AudioSys.sfx('click');
+  const him = c === 'him';
+  document.getElementById('selHim').classList.toggle('selected', him);
+  document.getElementById('selHer').classList.toggle('selected', !him);
+  document.getElementById('selHim').classList.toggle('confirming', him);
+  document.getElementById('selHer').classList.toggle('confirming', !him);
+  document.getElementById('selHim').classList.toggle('dim', !him);
+  document.getElementById('selHer').classList.toggle('dim', him);
+  AudioSys.init(); AudioSys.sfx('click');
+  setTimeout(() => {
+    menuEl.classList.add('hidden');
+    document.body.classList.remove('menu');
+    startIntro({ noSkip: true });
+  }, 2100);
 }
 document.getElementById('selHim').addEventListener('click', () => selectChar('him'));
 document.getElementById('selHer').addEventListener('click', () => selectChar('her'));
