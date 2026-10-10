@@ -53,9 +53,15 @@
   #squirmy { position:fixed; left:12px; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:6; display:none;
     align-items:flex-end; gap:8px; cursor:pointer; max-width:78vw; }
   #squirmy.show { display:flex; }
-  #squirmy img { width:76px; height:76px; object-fit:cover; object-position:100% 0;
-    border-radius:50%; border:3px solid #7CFC00; background:#fff;
-    box-shadow:0 4px 14px rgba(0,0,0,.5); flex-shrink:0; }
+  #squirmy .felisface { width:76px; height:76px; border-radius:50%; border:3px solid #7CFC00; background:#fff;
+    background-image:url('game-assets/felis-idle-sheet.webp'); background-size:400% 100%; background-repeat:no-repeat;
+    box-shadow:0 4px 14px rgba(0,0,0,.5); flex-shrink:0; animation:felisIdle 2.4s infinite; }
+  @keyframes felisIdle {
+    0%, 24.9% { background-position:0% 50%; }
+    25%, 49.9% { background-position:33.333% 50%; }
+    50%, 74.9% { background-position:66.666% 50%; }
+    75%, 100% { background-position:100% 50%; }
+  }
   #sqBubble { background:#fff; border:3px solid #1c1c28; border-radius:14px;
     padding:8px 12px; font-size:13px; font-weight:600; color:#1c1c28;
     box-shadow:0 4px 14px rgba(0,0,0,.4); }
@@ -273,7 +279,7 @@
   <button class="right" data-k="ArrowRight" aria-label="Right">▶</button>
 </div>
 <div id="doorPrompt"></div>
-<div id="squirmy"><img src="game-assets/squirmy.webp" alt="Squirmy"><div id="sqBubble"></div></div>
+<div id="squirmy"><div class="felisface" role="img" aria-label="Felis"></div><div id="sqBubble"></div></div>
 <button id="introBtn" class="hudbtn" aria-label="Replay intro">🎬</button>
 <button id="muteBtn" class="hudbtn" aria-label="Mute">🔊</button>
 <div id="introLayer"></div>
@@ -672,6 +678,12 @@ function squirmyTip(key, text) {
   sqTimer = setTimeout(() => squirmyEl.classList.remove('show'), 7000);
 }
 squirmyEl.addEventListener('click', () => {
+  if (tour && tour.step === 0 && tour.seq < 2) { // tap Felis to hurry the intro exchange
+    clearTimeout(tour.seqTimer);
+    tourSeqNext();
+    return;
+  }
+  if (tour) { const line = currentTourLine(); if (line) tourSay(line); return; }
   squirmyEl.classList.remove('show');
   clearTimeout(sqTimer);
 });
@@ -679,7 +691,15 @@ squirmyEl.addEventListener('click', () => {
 // ---- guided tour: Squirmy walks the player through the basics ----
 // TOUR_LINES is filled from the player's dialogue-lab picks; while it's
 // empty the tour stays dormant and the game plays as before.
-const TOUR_LINES = {};
+const TOUR_LINES = {
+  move: "Yo! I\u2019m Felis \u2014 welcome to BROKENSPORT! This place is da bomb diggity! Let\u2019s see if you can still get jiggy after that hella landing... \u25C0",
+  name: "As IF! I get that a lot! Nah \u2014 I\u2019m Felis. Latin for \u2018cat,\u2019 I got the OG roots. Fool bit my style and blew straight up!",
+  arcade: "Okay, player! Head into the arcade \u2014 walk to the door, tap \u25B2. Booyah!",
+  phone: "Got a celly? \u2014 open your phone! \uD83D\uDCF1 Fo' real, ch-ch-ch-check it out!",
+  weed: "Let\u2019s kick it! WEEDSWEEPER \u2014 tap the app, tap a tile. No weeds. You got this, no doubt!",
+  stand: "Done in here! Back outside, homie \u2014 there\u2019s a spot I gotta show you. Peace out, arcade!",
+  finale: "Home base, baby! Remember this spot. Now get out there and find each other. Word up! \uD83C\uDF2A\uFE0F",
+};
 const STAND_X = 620; // the stand site, on the street
 let tour = null, tourStartX = 0, tourWeedPlayed = false;
 const tourBanner = document.getElementById('tourBanner');
@@ -698,7 +718,7 @@ function tourSay(text) {
   squirmyEl.classList.add('show');
 }
 function startTour() {
-  if (tour || Object.keys(TOUR_LINES).length < 6) return;
+  if (tour || !['move','name','arcade','phone','weed','stand','finale'].every(k => TOUR_LINES[k])) return;
   try { if (localStorage.getItem('heysup_tour') === '1') return; } catch (e) {}
   tourStartX = player.x;
   tour = { step: 0 };
@@ -709,10 +729,39 @@ function tourStep() {
   const s = TOUR_STEPS[tour.step];
   tourObj.textContent = s.obj;
   tourCount.textContent = (tour.step + 1) + '/' + TOUR_STEPS.length;
-  tourSay(TOUR_LINES[s.id]);
+  if (s.id === 'move') startNameExchange();
+  else { tourSay(TOUR_LINES[s.id]); AudioSys.sfx('textIn'); }
+}
+// first meeting: greeting -> "Felix? Is that you?" -> the name explanation;
+// tapping Felis hurries the exchange along
+function startNameExchange() {
+  tour.seq = 0;
+  tourSay(TOUR_LINES.move);
   AudioSys.sfx('textIn');
+  clearTimeout(tour.seqTimer);
+  tour.seqTimer = setTimeout(tourSeqNext, 9000);
+}
+function tourSeqNext() {
+  if (!tour) return;
+  if (tour.seq === 0) {
+    tour.seq = 1;
+    sqBubble.innerHTML = '<b>You:</b> &ldquo;Felix? Is that you?&rdquo;';
+    squirmyEl.classList.add('show');
+    AudioSys.sfx('textOut');
+    clearTimeout(tour.seqTimer);
+    tour.seqTimer = setTimeout(tourSeqNext, 8000);
+  } else if (tour.seq === 1) {
+    tour.seq = 2;
+    tourSay(TOUR_LINES.name);
+    AudioSys.sfx('textIn');
+  }
+}
+function currentTourLine() {
+  if (tour.step === 0 && tour.seq < 2) return null;
+  return TOUR_LINES[tour.step === 0 ? 'name' : TOUR_STEPS[tour.step].id];
 }
 function tourAdvance() {
+  clearTimeout(tour.seqTimer);
   AudioSys.sfx('win');
   tour.step++;
   if (tour.step >= TOUR_STEPS.length) { finishTour(); return; }
