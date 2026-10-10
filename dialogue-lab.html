@@ -47,9 +47,6 @@ Tap <b>📋</b> to copy that pick, or tap lines to mark your picks and use <b>Co
 <h1 style="margin-top:26px">🧭 Guided Tour</h1>
 <p class="hint">Felis's tutorial walk — pick his lines the same way. These go live in the game once you've chosen them all.</p>
 <div id="labTour"></div>
-<h1 style="margin-top:26px">🐾 Felis — hometown mascot</h1>
-<p class="hint">One extra beat: Felis reveals he's the Berries' mascot. Pick it the same way — it goes live once you've chosen.</p>
-<div id="labMascot"></div>
 <button id="copyPicks">📋 Copy my picks</button>
 <script>
 // ---- mini voice engine (same as the game) ----
@@ -136,7 +133,6 @@ const BEATS = [
 ];
 const lab = document.getElementById('lab');
 const labTour = document.getElementById('labTour');
-const labMascot = document.getElementById('labMascot');
 const picks = {};
 const ABC = ['A', 'B', 'C'];
 // ---- guided-tour beats: Felis teaches the basics ----
@@ -170,13 +166,6 @@ const TOUR_BEATS = [
     'Home base, baby! Remember this spot. Now get out there and find each other. Word up! \uD83C\uDF2A\uFE0F',
     'The stand site! The 90s are yours now \u2014 go kick it! And keep it real out there!' ] },
 ];
-// ---- Felis hometown-mascot reveal: he is the Logansport Berries' mascot ----
-const MASCOT_BEATS = [
-  { n: 'T-berry', ctx: 'Felis reveals he\u2019s the Berries\u2019 mascot \u2014 Logansport High, home of the Berries (plays once, right after the name exchange)', opts: [
-    'Fun fact, player \u2014 I\u2019m the Berries\u2019 mascot! Logansport High, baby! Oldest cat mascot in Indiana. You\u2019re in Berry country now! \uD83D\uDC3E',
-    'Oh \u2014 and I\u2019m kind of a big deal here. Berries mascot. Logansport High. The Berry Bowl\u2019s MY house! \uD83C\uDFC0',
-    'Welcome to Berry country! I\u2019m the Logansport Berries\u2019 mascot \u2014 yes, THE Berries. Now go grab the brass ring, player!' ] },
-];
 function renderBeats(beats, container) {
   beats.forEach(b => {
     const div = document.createElement('div');
@@ -193,7 +182,6 @@ function renderBeats(beats, container) {
 }
 renderBeats(BEATS, lab);
 renderBeats(TOUR_BEATS, labTour);
-renderBeats(MASCOT_BEATS, labMascot);
 function flashCopy(btn, text) {
   const done = () => { btn.textContent = '✓'; setTimeout(() => btn.textContent = '📋', 1200); };
   if (navigator.clipboard && navigator.clipboard.writeText)
@@ -240,7 +228,6 @@ container.addEventListener('click', e => {
 }
 wireLab(lab);
 wireLab(labTour);
-wireLab(labMascot);
 function wireInput(container) {
 container.addEventListener('input', e => {
   const inp = e.target.closest('.dinput');
@@ -260,12 +247,10 @@ container.addEventListener('input', e => {
 }
 wireInput(lab);
 wireInput(labTour);
-wireInput(labMascot);
 document.getElementById('copyPicks').addEventListener('click', function() {
   const codes = BEATS.map(b => picks[String(b.n)] || (b.n + '?')).join(' ');
   const tcodes = TOUR_BEATS.map(b => picks[String(b.n)] || (b.n + '?')).join(' ');
-  const mcodes = MASCOT_BEATS.map(b => picks[String(b.n)] || (b.n + '?')).join(' ');
-  const all = codes + ' | ' + tcodes + ' | ' + mcodes;
+  const all = codes + ' | ' + tcodes;
   const done = () => { this.textContent = '✓ Copied: ' + all; setTimeout(() => this.textContent = '📋 Copy my picks', 2000); };
   if (navigator.clipboard && navigator.clipboard.writeText)
     navigator.clipboard.writeText(all).then(done).catch(done);
