@@ -649,16 +649,13 @@ for (let i = 0; i < 22; i++) motes.push({
   x: Math.random(), y: Math.random(), s: 1 + Math.random() * 2.4,
   vx: (Math.random() - 0.5) * 0.014, vy: -0.004 - Math.random() * 0.01, ph: Math.random() * 6.28
 });
+const cloudSpriteImg = new Image(); cloudSpriteImg.src = 'game-assets/cloud-sprite.webp';
 function drawCloud(x, y, s, alpha) {
+  if (!cloudSpriteImg.naturalWidth) return;
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = '#ffffff';
-  const u = 46 * s;
-  ctx.beginPath();
-  ctx.ellipse(x, y, u, u * 0.45, 0, 0, 6.283);
-  ctx.ellipse(x - u * 0.7, y + u * 0.12, u * 0.6, u * 0.32, 0, 0, 6.283);
-  ctx.ellipse(x + u * 0.7, y + u * 0.12, u * 0.62, u * 0.34, 0, 0, 6.283);
-  ctx.fill();
+  const cw = 300 * s, ch = cw * (cloudSpriteImg.naturalHeight / cloudSpriteImg.naturalWidth);
+  ctx.drawImage(cloudSpriteImg, x - cw / 2, y - ch / 2, cw, ch);
   ctx.restore();
 }
 function drawParallax(camX, w, dt) {
@@ -931,11 +928,11 @@ function tourStep() {
   else { tourSay(TOUR_LINES[s.id]); AudioSys.sfx('textIn'); }
 }
 // first meeting: greeting -> "Felix? Is that you?" -> the name explanation;
+// runs like the cinematic: blooming word-by-word captions, not the bubble.
 // tapping Felis hurries the exchange along
 function startNameExchange() {
   tour.seq = 0;
-  tourSay(TOUR_LINES.move);
-  AudioSys.sfx('textIn');
+  showCaption(TOUR_LINES.move);
   clearTimeout(tour.seqTimer);
   tour.seqTimer = setTimeout(tourSeqNext, 9000);
 }
@@ -943,15 +940,12 @@ function tourSeqNext() {
   if (!tour) return;
   if (tour.seq === 0) {
     tour.seq = 1;
-    sqBubble.innerHTML = '<b>You:</b> &ldquo;Felix? Is that you?&rdquo;';
-    squirmyEl.classList.add('show');
-    AudioSys.sfx('textOut');
+    showCaption("<span class='who'>You:</span> &ldquo;Felix? Is that you?&rdquo;");
     clearTimeout(tour.seqTimer);
     tour.seqTimer = setTimeout(tourSeqNext, 8000);
   } else if (tour.seq === 1) {
     tour.seq = 2;
-    tourSay(TOUR_LINES.name);
-    AudioSys.sfx('textIn');
+    showCaption(TOUR_LINES.name);
   }
 }
 function currentTourLine() {
@@ -960,6 +954,7 @@ function currentTourLine() {
 }
 function tourAdvance() {
   clearTimeout(tour.seqTimer);
+  showCaption(null); // clear the cinematic exchange captions
   AudioSys.sfx('win');
   tour.step++;
   if (tour.step >= TOUR_STEPS.length) { finishTour(); return; }
@@ -1213,7 +1208,7 @@ const skipBtn = document.getElementById('skipIntro');
 const standImg = new Image(); standImg.src = 'game-assets/stand.webp';
 let mode = 'menu';
 const WX = 0.63, WY = 0.46; // serving-window center, fraction of screen
-const INTRO = { beat: 0, t: 0, portalR: 0, flash: 0, spin: 0, suckT: 0, kyleT: 0 };
+const INTRO = { beat: 0, t: 0, portalR: 0, flash: 0, spin: 0, suckT: 0, kyleT: 0, thudPlayed: false, landDust: false, dust: [] };
 // your pick is the hero who dives; the other gets taken by the portal
 function buildBeats() {
   const heroIsHim = (char === 'him');
@@ -1342,6 +1337,7 @@ function clearCaption() {
 function startIntro(opts) {
   INTRO.beat = 0; INTRO.t = 0; INTRO.portalR = 0; INTRO.flash = 0;
   INTRO.spin = 0; INTRO.suckT = 0; INTRO.kyleT = 0;
+  INTRO.thudPlayed = false; INTRO.landDust = false; INTRO.dust = [];
   BEATS = buildBeats();
   INTRO.vSheet = (char === 'him') ? SHEETS.her : SHEETS.him;
   INTRO.hSheet = SHEETS[char];
@@ -1389,7 +1385,6 @@ function nextBeat() {
   if (INTRO.beat === 7) AudioSys.sfx('dive');
   if (INTRO.beat === 8) AudioSys.sfx('shimmer');
   if (INTRO.beat === 9) { INTRO.flash = 0; AudioSys.sfx('dive'); }
-  if (INTRO.beat === 10) AudioSys.sfx('thud');
 }
 // ---- rough-landing cutscene (beats 9-11): out of the sky portal, rough landing, back on their feet ----
 function drawLanding(dt) {
@@ -1463,6 +1458,8 @@ function drawLandingFall(dt) {
   const pl = Math.min(1, bt / 2.6), pe = pl * pl;
   const hy = H * 0.16 + (H * 0.95 - H * 0.16) * pe;
   const hx = W / 2 + Math.sin(bt * 3) * 30 * (1 - pl);
+  // thud lands exactly when the hero visually hits the ground
+  if (bt >= 2.6 && !INTRO.thudPlayed) { INTRO.thudPlayed = true; AudioSys.sfx('thud'); }
   const img = INTRO.hFall;
   if (img.naturalWidth) {
     const dh = 200, dw = dh * img.naturalWidth / img.naturalHeight;
@@ -1515,17 +1512,9 @@ function drawLandingGetup(dt) {
     const rise = Math.min(1, bt / 1.6);
     drawCrash(INTRO.crash[2], W / 2, gy + (1 - rise) * 40, 250);
   } else {
-    // crossfade into the standing idle sprite, ready for the tour
-    const cf = Math.min(1, (bt - 1.7) / 0.6);
-    ctx.save();
-    ctx.globalAlpha = 1 - cf;
-    drawCrash(INTRO.crash[2], W / 2, gy, 250);
-    ctx.restore();
-    ctx.save();
-    ctx.globalAlpha = cf;
+    // up on their feet — the standing idle sprite, fully opaque
     const f = INTRO.hSheet.idle[0];
     drawSheetFrame(INTRO.hSheet.img, f, W / 2, gy, 1.0, 0);
-    ctx.restore();
   }
 }
 function drawIntro(dt) {
