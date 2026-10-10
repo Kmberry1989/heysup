@@ -246,6 +246,24 @@
   #ringGame { position:fixed; inset:0; z-index:10; display:none;
     align-items:center; justify-content:center; background:rgba(5,5,12,.78); }
   #ringGame.open { display:flex; }
+  /* Meyers Snort Hole bowling minigame */
+  #bowlGame { position:fixed; inset:0; z-index:10; display:none;
+    align-items:center; justify-content:center; background:rgba(5,5,12,.82); }
+  #bowlGame.open { display:flex; }
+  #bowlCard { width:min(380px, 94vw); border-radius:18px; position:relative; padding:10px;
+    border:4px solid #ff5fd0; box-shadow:0 12px 60px rgba(0,0,0,.7); background:#1a1426; }
+  #bowlCard h3 { margin:2px 0 6px; text-align:center; color:#ffd23f; font-size:17px; }
+  #bowlScoreImg { width:130px; display:block; margin:0 auto 6px; }
+  #bowlCanvas { width:100%; display:block; border-radius:10px; touch-action:none; }
+  #bowlPower { height:10px; border-radius:6px; background:#333; margin-top:8px; overflow:hidden; display:none; }
+  #bowlPowerFill { height:100%; width:0%; background:linear-gradient(90deg,#7CFC00,#ffd23f,#ff4444); }
+  #bowlMsg { text-align:center; color:#fff; font-weight:700; min-height:22px; margin-top:6px; font-size:14px; }
+  #bowlControls { display:flex; gap:8px; justify-content:center; margin-top:8px; }
+  #bowlControls button { font-size:15px; font-weight:800; border:none; border-radius:999px;
+    padding:10px 18px; cursor:pointer; background:#2d6a4f; color:#fff; }
+  #bowlThrow { background:#d68c45; }
+  #bowlClose { position:absolute; top:6px; right:6px; width:32px; height:32px; border-radius:50%;
+    border:none; background:#000; color:#fff; font-size:15px; font-weight:800; cursor:pointer; }
   #ringCard { width:min(360px, 92vw); border-radius:18px; overflow:hidden; position:relative;
     border:4px solid #ffd23f; box-shadow:0 12px 60px rgba(0,0,0,.7); background:#201510; }
   #ringCard img.bg { width:100%; display:block; }
@@ -378,6 +396,21 @@
     <button id="ringClose" aria-label="Close">✕</button>
   </div>
 </div>
+<div id="bowlGame">
+  <div id="bowlCard">
+    <button id="bowlClose" aria-label="Close">✕</button>
+    <h3>🎳 MEYERS SNORT HOLE</h3>
+    <img id="bowlScoreImg" src="game-assets/bowl-scorecard.webp" alt="Bowling scorecard">
+    <canvas id="bowlCanvas" width="340" height="400"></canvas>
+    <div id="bowlPower"><div id="bowlPowerFill"></div></div>
+    <div id="bowlMsg">← → to aim, then THROW</div>
+    <div id="bowlControls">
+      <button id="bowlLeft">◀</button>
+      <button id="bowlThrow">THROW 🎳</button>
+      <button id="bowlRight">▶</button>
+    </div>
+  </div>
+</div>
 <div id="toast"></div>
 <div id="closeHint">tap outside the phone to close</div>
 <script>
@@ -435,6 +468,7 @@ const theatreImg = new Image(); theatreImg.src = 'game-assets/theatre-stale-v2.w
 const carouselImg = new Image(); carouselImg.src = 'game-assets/carousel-v2.webp';
 const rinkImg = new Image(); rinkImg.src = 'game-assets/rink-v3.webp';
 const bowlImg = new Image(); bowlImg.src = 'game-assets/bowl-v3.webp';
+const bowlLanesImg = new Image(); bowlLanesImg.src = 'game-assets/bowl-lanes.webp';
 const highImg = new Image(); highImg.src = 'game-assets/highschool-v2.webp';
 const felisSheetImg = new Image(); felisSheetImg.src = 'game-assets/felis-idle-sheet.webp';
 const fallHimImg = new Image(); fallHimImg.src = 'game-assets/fall-him.png';
@@ -458,8 +492,8 @@ const portalImgs = [1, 2, 3, 4].map(n => { const im = new Image(); im.src = 'gam
 const himImg = new Image(); himImg.src = 'game-assets/him.png';
 const herImg = new Image(); herImg.src = 'game-assets/her.png';
 SHEETS.him.img = himImg; SHEETS.her.img = herImg;
-const SCENE_IMG = { street: streetImg, arcade: arcadeImg, mall: mallImg, riverside: null };
-const SCENE_BG = { street: '#7ec8f7', arcade: '#2a1a3e', mall: '#3e2a1a', riverside: '#8fd8cf' };
+const SCENE_IMG = { street: streetImg, arcade: arcadeImg, mall: mallImg, riverside: null, bowl: bowlLanesImg };
+const SCENE_BG = { street: '#7ec8f7', arcade: '#2a1a3e', mall: '#3e2a1a', riverside: '#8fd8cf', bowl: '#241a30' };
 
 const player = { x: 400, vx: 0, dir: 1, moving: false, animT: 0, heightPx: 200 };
 // Felis follows the player through the world (drawn in-canvas, not a corner HUD)
@@ -474,6 +508,13 @@ let touchLeft = false, touchRight = false;
 
 window.addEventListener('keydown', e => {
   if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)) e.preventDefault();
+  if (bowlGameOpen()) {
+    if (e.key === 'ArrowLeft') nudgeBowl(-1);
+    else if (e.key === 'ArrowRight') nudgeBowl(1);
+    else if (e.key === ' ' || e.key === 'ArrowUp') bowlThrow();
+    else if (e.key === 'Escape') closeBowlGame();
+    return;
+  }
   keys[e.key] = true;
   if (e.key === 'ArrowUp') tryEnter();
   if (e.key === 'ArrowDown') tryExit();
@@ -557,7 +598,7 @@ function bgAspect(img) {
 function worldW() {
   return Math.max(W, H * bgAspect(SCENE_IMG[scene]));
 }
-const DOORS = { mall: [0.84, 0.92], riverside: [0.03, 0.10] };
+const DOORS = { mall: [0.84, 0.92], riverside: [0.03, 0.10], bowl: [0.68, 0.74] };
 const MALL_DOORS = { arcade: [0.30, 0.42] };
 const doorPrompt = document.getElementById('doorPrompt');
 let promptAction = null; // 'enter' | 'exit' | 'ring' | 'take' | 'build'
@@ -735,6 +776,10 @@ function drawTransition() {
 function nearCarousel() {
   return scene === 'riverside' && Math.abs(player.x - worldW() * 0.55) < 130;
 }
+function nearLane() {
+  const zx = player.x / worldW();
+  return scene === 'bowl' && zx >= 0.35 && zx <= 0.65;
+}
 function enterScene(target, from) {
   AudioSys.sfx('whoosh');
   startTransition('iris', 0.8, () => {
@@ -744,6 +789,7 @@ function enterScene(target, from) {
     if (target === 'arcade') squirmyTip('arcade', 'The Okay Space! The arcade lives INSIDE the mall in BROKENSPORT. Mullet Kart grudge matches go down in this joint. Check the Events app!');
     if (target === 'mall') squirmyTip('mall', 'BROKENSPORT Mall — Shears, JCPenny, and a fountain that gave up in \u201998.');
     if (target === 'riverside') squirmyTip('riverside', 'Riverslide Park! The Mental Carousel — grab the brass ring, win a free ride! 🎠');
+    if (target === 'bowl') squirmyTip('bowl', 'Meyers Snort Hole! Twenty-four lanes of pure glory. Step up to a lane and bowl a frame! 🎳');
   });
 }
 function tryEnter() {
@@ -755,6 +801,7 @@ function tryEnter() {
     return;
   }
   if (scene === 'mall' && mallDoorAt() === 'arcade') { enterScene('arcade', 'mall'); return; }
+  if (scene === 'bowl' && nearLane()) { openBowlGame(); return; }
   const pk = partAt();
   if (pk) { takePart(pk); return; }
   if (scene === 'riverside' && nearCarousel()) { openRingGame(); return; }
@@ -1772,7 +1819,12 @@ const SONGS = {
             bass: [0,-1,-1,-1, -1,-1,-1,-1, 5,-1,-1,-1, -1,-1,7,-1],
             lead: [12,-1,-1,15, -1,-1,19,-1, -1,17,-1,15, -1,-1,12,-1],
             kick: [0], hat: [4, 12],
-            arp: [12,-1,16,-1, 19,-1,16,-1, 12,-1,16,-1, 19,-1,24,-1], arpType: 'sine', arpVol: 0.03, arpOct: 4 } };
+            arp: [12,-1,16,-1, 19,-1,16,-1, 12,-1,16,-1, 19,-1,24,-1], arpType: 'sine', arpVol: 0.03, arpOct: 4 },
+  bowl: { bpm: 100, root: 116.5, bassType: 'square', bassVol: 0.07, leadType: 'square', leadVol: 0.035,
+            bass: [0,-1,0,-1, 3,-1,5,-1, 7,-1,5,-1, 3,-1,0,-1],
+            lead: [12,-1,-1,15, -1,-1,19,-1, -1,17,-1,15, 12,-1,-1,-1],
+            kick: [0, 8], hat: [2, 6, 10, 14],
+            arp: [12,-1,15,-1, 19,-1,22,-1, 19,-1,15,-1, 12,-1,15,-1], arpType: 'triangle', arpVol: 0.03, arpOct: 2 } };
 function semi(root, st) { return root * Math.pow(2, st / 12); }
 const AudioSys = {
   ctx: null, muted: false, musicInt: null, mStep: 0, noiseBuf: null,
@@ -2139,6 +2191,159 @@ ringCard.addEventListener('click', e => {
 });
 document.getElementById('ringClose').addEventListener('click', e => { e.stopPropagation(); closeRingGame(); });
 
+// ---- Meyers Snort Hole bowling minigame ----
+const bowlGame = document.getElementById('bowlGame');
+const bowlCard = document.getElementById('bowlCard');
+const bowlCanvas = document.getElementById('bowlCanvas');
+const bctx = bowlCanvas.getContext('2d');
+const bowlMsg = document.getElementById('bowlMsg');
+const bowlPower = document.getElementById('bowlPower');
+const bowlPowerFill = document.getElementById('bowlPowerFill');
+const BOWL_BEST_KEY = 'heysup_bowlbest';
+let bowlState = null;
+function bowlGameOpen() { return !!(bowlState && bowlState.live && bowlGame.classList.contains('open')); }
+function newBowlState() {
+  const pins = [];
+  const layout = [[170,80],[150,102],[190,102],[130,124],[170,124],[210,124],[110,146],[150,146],[190,146],[230,146]];
+  for (const pt of layout) pins.push({ x: pt[0], y: pt[1], down: false, tip: 0, ox: 0, oy: 0, rot: 0 });
+  let best = 0;
+  try { best = +(localStorage.getItem(BOWL_BEST_KEY) || 0); } catch (e) {}
+  return { phase: 'aim', aimX: 170, power: 0, pdir: 1, ball: { x: 170, y: 360 }, pins, live: true, last: 0, resolved: false, best };
+}
+function openBowlGame() {
+  if (bowlState) bowlState.live = false;
+  bowlState = newBowlState();
+  bowlMsg.textContent = '← → to aim, then THROW';
+  bowlPower.style.display = 'none';
+  bowlGame.classList.add('open');
+  AudioSys.sfx('open');
+  requestAnimationFrame(bowlTick);
+}
+function closeBowlGame() {
+  if (bowlState) bowlState.live = false;
+  bowlGame.classList.remove('open');
+  AudioSys.sfx('close');
+}
+function nudgeBowl(d) {
+  const s = bowlState;
+  if (!s || !s.live || s.phase !== 'aim') return;
+  s.aimX = Math.max(90, Math.min(250, s.aimX + d * 14));
+  AudioSys.sfx('tick');
+}
+function bowlThrow() {
+  const s = bowlState;
+  if (!s || !s.live) return;
+  if (s.phase === 'aim') {
+    s.phase = 'power'; s.power = 0; s.pdir = 1;
+    bowlPower.style.display = 'block';
+    bowlMsg.textContent = 'tap THROW to lock power!';
+    AudioSys.sfx('click');
+  } else if (s.phase === 'power') {
+    s.phase = 'roll';
+    s.ball.x = s.aimX; s.ball.y = 360; s.resolved = false;
+    bowlPower.style.display = 'none';
+    bowlMsg.textContent = '';
+    AudioSys.sfx('whoosh');
+  } else if (s.phase === 'done') {
+    openBowlGame();
+  }
+}
+function knockPin(p) {
+  p.down = true;
+  const a = Math.random() * Math.PI * 2;
+  p.ox = Math.cos(a) * 24; p.oy = Math.sin(a) * 15; p.rot = (Math.random() - 0.5) * 2.4;
+}
+function resolvePins(s) {
+  const hitR = 15 + s.power * 0.17;
+  for (const p of s.pins) {
+    if (p.down) continue;
+    const d = Math.abs(p.x - s.ball.x) + Math.random() * 8;
+    if (d < hitR) knockPin(p);
+  }
+  for (const p of s.pins) { // chain reaction, one pass
+    if (p.down) continue;
+    for (const q of s.pins) {
+      if (!q.down || q === p) continue;
+      if (Math.hypot(p.x - q.x, p.y - q.y) < 30 && Math.random() < 0.5) { knockPin(p); break; }
+    }
+  }
+  if (s.pins.some(p => p.down)) AudioSys.sfx('thud');
+}
+function endBowlThrow(s) {
+  s.phase = 'done';
+  const n = s.pins.filter(p => p.down).length;
+  if (n > s.best) {
+    s.best = n;
+    try { localStorage.setItem(BOWL_BEST_KEY, String(n)); } catch (e) {}
+  }
+  bowlMsg.textContent = n + (n === 1 ? ' pin' : ' pins') + '! Best: ' + s.best + ' — THROW to bowl again';
+  AudioSys.sfx(n >= 7 ? 'win' : n >= 4 ? 'coin' : 'click');
+}
+function bowlTick(t) {
+  const s = bowlState;
+  if (!s || !s.live) return;
+  const dt = Math.min(0.05, s.last ? (t - s.last) / 1000 : 0.016);
+  s.last = t;
+  if (s.phase === 'power') {
+    s.power += s.pdir * dt * 130;
+    if (s.power >= 100) { s.power = 100; s.pdir = -1; }
+    if (s.power <= 0) { s.power = 0; s.pdir = 1; }
+    bowlPowerFill.style.width = s.power + '%';
+  } else if (s.phase === 'roll') {
+    s.ball.y -= dt * 430;
+    if (s.ball.y <= 170 && !s.resolved) { s.resolved = true; resolvePins(s); }
+    if (s.ball.y < 16) endBowlThrow(s);
+  }
+  for (const p of s.pins) if (p.down && p.tip < 1) p.tip = Math.min(1, p.tip + dt * 3);
+  drawBowl(s);
+  if (s.live) requestAnimationFrame(bowlTick);
+}
+function drawBowl(s) {
+  bctx.fillStyle = '#c89b62'; bctx.fillRect(0, 0, 340, 400);
+  bctx.fillStyle = '#3a2c1c'; bctx.fillRect(40, 20, 24, 360); bctx.fillRect(276, 20, 24, 360);
+  bctx.strokeStyle = 'rgba(120,80,40,.35)'; bctx.lineWidth = 2;
+  for (let x = 92; x <= 248; x += 16) { bctx.beginPath(); bctx.moveTo(x, 20); bctx.lineTo(x, 380); bctx.stroke(); }
+  bctx.fillStyle = 'rgba(90,60,30,.5)';
+  for (const ax of [130, 170, 210]) {
+    bctx.beginPath(); bctx.moveTo(ax, 300); bctx.lineTo(ax - 8, 320); bctx.lineTo(ax + 8, 320); bctx.fill();
+  }
+  for (const p of s.pins) { // pins, tipping over when hit
+    bctx.save();
+    bctx.translate(p.x + p.ox * p.tip, p.y + p.oy * p.tip);
+    bctx.rotate(p.rot * p.tip);
+    bctx.fillStyle = '#f5f0e6';
+    bctx.beginPath(); bctx.ellipse(0, 0, 9, 13, 0, 0, 6.283); bctx.fill();
+    bctx.fillStyle = '#d33'; bctx.fillRect(-9, -4, 18, 5);
+    bctx.strokeStyle = '#222'; bctx.lineWidth = 2; bctx.stroke();
+    bctx.restore();
+  }
+  const bx = s.phase === 'aim' ? s.aimX : s.ball.x;
+  const by = s.phase === 'aim' ? 360 : s.ball.y;
+  if (by > 10) {
+    bctx.fillStyle = '#5b2a86';
+    bctx.beginPath(); bctx.arc(bx, by, 11, 0, 6.283); bctx.fill();
+    bctx.fillStyle = '#7c4db0';
+    bctx.beginPath(); bctx.arc(bx - 3, by - 3, 4, 0, 6.283); bctx.fill();
+  }
+  if (s.phase === 'aim') {
+    bctx.strokeStyle = '#ffd23f'; bctx.lineWidth = 3; bctx.setLineDash([6, 4]);
+    bctx.beginPath(); bctx.moveTo(s.aimX, 348); bctx.lineTo(s.aimX, 180); bctx.stroke();
+    bctx.setLineDash([]);
+  }
+}
+document.getElementById('bowlThrow').addEventListener('click', e => { e.stopPropagation(); bowlThrow(); });
+document.getElementById('bowlLeft').addEventListener('click', e => { e.stopPropagation(); nudgeBowl(-1); });
+document.getElementById('bowlRight').addEventListener('click', e => { e.stopPropagation(); nudgeBowl(1); });
+document.getElementById('bowlClose').addEventListener('click', e => { e.stopPropagation(); closeBowlGame(); });
+bowlCanvas.addEventListener('click', e => {
+  const s = bowlState;
+  if (!s || !s.live) return;
+  const r = bowlCanvas.getBoundingClientRect();
+  const cx = (e.clientX - r.left) / r.width * 340;
+  if (s.phase === 'aim') nudgeBowl(cx > 170 ? 1 : -1);
+  else bowlThrow();
+});
+
 // main loop
 let last = performance.now();
 
@@ -2374,12 +2579,25 @@ function drawPlayScene(dt) {
     ctx.fillText('PATCH', bx, gy - 131);
   }
 
+  // Meyers Snort Hole interior: neon name sign over the lanes
+  if (scene === 'bowl') {
+    ctx.textAlign = 'center';
+    const gl2 = 0.75 + 0.25 * Math.sin(bgT * 3);
+    ctx.fillStyle = 'rgba(20,10,30,' + (0.55 * gl2).toFixed(3) + ')';
+    ctx.fillRect(W / 2 - 200, 14, 400, 58);
+    ctx.strokeStyle = '#ff5fd0'; ctx.lineWidth = 3;
+    ctx.strokeRect(W / 2 - 200, 14, 400, 58);
+    ctx.fillStyle = '#ffd23f'; ctx.font = 'bold 25px system-ui';
+    ctx.fillText('MEYERS SNORT HOLE', W / 2, 52);
+  }
+
   // door / interact prompt
   promptAction = null;
   if (scene === 'street') {
     const d = doorAt();
     if (d === 'mall') { doorPrompt.textContent = '▲ BROKENSPORT Mall'; promptAction = 'enter'; }
     else if (d === 'riverside') { doorPrompt.textContent = '▲ Riverslide Park'; promptAction = 'enter'; }
+    else if (d === 'bowl') { doorPrompt.textContent = '🎳 Meyers Snort Hole'; promptAction = 'enter'; }
     else if (canBuild()) { doorPrompt.textContent = '🔨 build the stand'; promptAction = 'build'; }
     if (promptAction) doorPrompt.classList.add('show');
     else doorPrompt.classList.remove('show');
@@ -2392,6 +2610,10 @@ function drawPlayScene(dt) {
     doorPrompt.classList.add('show');
   } else if (scene === 'arcade') {
     doorPrompt.textContent = '▼ back to the mall'; doorPrompt.classList.add('show'); promptAction = 'exit';
+  } else if (scene === 'bowl') {
+    if (nearLane()) { doorPrompt.textContent = '🎳 bowl a frame!'; promptAction = 'bowl'; }
+    else { doorPrompt.textContent = '▼ back to the street'; promptAction = 'exit'; }
+    doorPrompt.classList.add('show');
   } else {
     const pk = partAt();
     if (pk) { doorPrompt.textContent = '✋ take the ' + PART_INFO[pk].label; doorPrompt.classList.add('show'); promptAction = 'take'; }
