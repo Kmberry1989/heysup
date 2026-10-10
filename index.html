@@ -59,6 +59,13 @@
   #sqBubble { background:#fff; border:3px solid #1c1c28; border-radius:14px;
     padding:8px 12px; font-size:13px; font-weight:600; color:#1c1c28;
     box-shadow:0 4px 14px rgba(0,0,0,.4); }
+  /* guided-tour objective banner — sits below the HUD, top-left is otherwise free */
+  #tourBanner { position:fixed; top:calc(64px + env(safe-area-inset-top, 0px)); left:12px; z-index:5;
+    display:none; align-items:center; gap:8px; background:rgba(10,10,20,.85);
+    border:2px solid #7CFC00; border-radius:12px; padding:8px 12px; color:#fff;
+    font-size:13px; font-weight:700; max-width:72vw; }
+  #tourBanner.show { display:flex; }
+  #tourCount { color:#7CFC00; font-size:11px; white-space:nowrap; }
   /* main menu */
   #menu { position:fixed; inset:0; z-index:40; display:flex; flex-direction:column;
     align-items:center; justify-content:center; gap:10px; padding:20px;
@@ -106,7 +113,7 @@
     25% { box-shadow:0 0 26px rgba(95,217,122,.9); transform:scale(1.06); }
     60% { box-shadow:0 0 18px rgba(95,217,122,.7); transform:scale(1.03); }
     100% { box-shadow:0 0 30px rgba(95,217,122,1); transform:scale(1.05); } }
-  body.menu #hud, body.menu .hudbtn, body.menu #dpad, body.menu #squirmy { display:none !important; }
+  body.menu #hud, body.menu .hudbtn, body.menu #dpad, body.menu #squirmy, body.menu #tourBanner { display:none !important; }
   /* splash */
   #splash { position:fixed; inset:0; z-index:60; background:#0b0b12; cursor:pointer;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
@@ -182,7 +189,7 @@
   #skipIntro.show { display:block; }
   #introBtn { right:14px; bottom:calc(220px + env(safe-area-inset-bottom, 0px)); background:#b565d8; }
   body.intro #hud, body.intro .hudbtn, body.intro #dpad,
-  body.intro #doorPrompt, body.intro #squirmy { display:none !important; }
+  body.intro #doorPrompt, body.intro #squirmy, body.intro #tourBanner { display:none !important; }
   /* phone */
   #phoneOverlay { position:fixed; inset:0; z-index:10; display:none;
     align-items:center; justify-content:center; background:rgba(5,5,12,.72); }
@@ -255,6 +262,7 @@
   <div class="title">hey, sup?</div>
   <div class="hint">prototype v5 &middot; &larr;&rarr;/AD walk &middot; &uarr; enter &middot; tap phone</div>
 </div>
+<div id="tourBanner"><span id="tourObj"></span><span id="tourCount"></span></div>
 <button id="swapBtn" class="hudbtn" aria-label="Swap character">🔄</button>
 <button id="phoneBtn" class="hudbtn" aria-label="Open phone">📱</button>
 <button id="dpadToggle" class="hudbtn" aria-label="Toggle touch controller">🎮</button>
@@ -655,6 +663,7 @@ const sqBubble = document.getElementById('sqBubble');
 const seenTips = new Set();
 let sqTimer = null;
 function squirmyTip(key, text) {
+  if (tour) return; // the tour owns Squirmy while it runs
   if (seenTips.has(key)) return;
   seenTips.add(key);
   sqBubble.textContent = text;
@@ -666,6 +675,61 @@ squirmyEl.addEventListener('click', () => {
   squirmyEl.classList.remove('show');
   clearTimeout(sqTimer);
 });
+
+// ---- guided tour: Squirmy walks the player through the basics ----
+// TOUR_LINES is filled from the player's dialogue-lab picks; while it's
+// empty the tour stays dormant and the game plays as before.
+const TOUR_LINES = {};
+const STAND_X = 620; // the stand site, on the street
+let tour = null, tourStartX = 0, tourWeedPlayed = false;
+const tourBanner = document.getElementById('tourBanner');
+const tourObj = document.getElementById('tourObj');
+const tourCount = document.getElementById('tourCount');
+const TOUR_STEPS = [
+  { id: 'move',   obj: '🚶 Walk left or right', check: () => Math.abs(player.x - tourStartX) > 160 },
+  { id: 'arcade', obj: '🕹️ Enter the arcade ▲', check: () => scene === 'arcade' },
+  { id: 'phone',  obj: '📱 Open your phone', check: () => overlay.classList.contains('open') },
+  { id: 'weed',   obj: '🌿 Play WEEDSWEEPER — clear a tile', check: () => tourWeedPlayed },
+  { id: 'stand',  obj: '🌭 Back to the street — visit the stand site', check: () => scene === 'street' && Math.abs(player.x - STAND_X) < 130 },
+];
+function tourSay(text) {
+  clearTimeout(sqTimer);
+  sqBubble.textContent = text;
+  squirmyEl.classList.add('show');
+}
+function startTour() {
+  if (tour || Object.keys(TOUR_LINES).length < 6) return;
+  try { if (localStorage.getItem('heysup_tour') === '1') return; } catch (e) {}
+  tourStartX = player.x;
+  tour = { step: 0 };
+  tourBanner.classList.add('show');
+  tourStep();
+}
+function tourStep() {
+  const s = TOUR_STEPS[tour.step];
+  tourObj.textContent = s.obj;
+  tourCount.textContent = (tour.step + 1) + '/' + TOUR_STEPS.length;
+  tourSay(TOUR_LINES[s.id]);
+  AudioSys.sfx('textIn');
+}
+function tourAdvance() {
+  AudioSys.sfx('win');
+  tour.step++;
+  if (tour.step >= TOUR_STEPS.length) { finishTour(); return; }
+  tourStep();
+}
+function finishTour() {
+  tourSay(TOUR_LINES.finale);
+  tourObj.textContent = '✨ Tour complete — BROKENSPORT is yours';
+  tourCount.textContent = '';
+  setTimeout(() => {
+    squirmyEl.classList.remove('show');
+    tourBanner.classList.remove('show');
+    toast('Now go find each other. 🌪️');
+    try { localStorage.setItem('heysup_tour', '1'); } catch (e) {}
+    tour = null;
+  }, 6000);
+}
 
 // ---- splash screen: black + tap pill until the first tap, then the show ----
 const splash = document.getElementById('splash');
@@ -922,6 +986,7 @@ function enterGame() {
 function finishIntro() {
   try { localStorage.setItem('heysup_intro', '1'); } catch (e) {}
   enterGame();
+  startTour();
   toast('Welcome to BROKENSPORT. Find each other. \u{1F32A}\uFE0F');
 }
 function nextBeat() {
@@ -1469,6 +1534,7 @@ function weedReveal(i) {
     }
   }
   AudioSys.sfx('dig');
+  tourWeedPlayed = true; // guided tour: played a round
   if (wOpen.size === WN * WN - WCOUNT) {
     wOver = true;
     AudioSys.sfx('win');
@@ -1591,6 +1657,9 @@ function frame(now) {
 
   drawPlayScene(dt);
 
+  // guided tour: advance when the current step's condition is met
+  if (tour && TOUR_STEPS[tour.step].check()) tourAdvance();
+
   requestAnimationFrame(frame);
 }
 
@@ -1610,6 +1679,15 @@ function drawPlayScene(dt) {
     const sh = 240, sw = sh * (signImg.naturalWidth / signImg.naturalHeight);
     const gy = H * 0.84;
     ctx.drawImage(signImg, 200 - camX - sw / 2, gy - sh + 8, sw, sh);
+  }
+
+  // the stand site — where the chili dog stand will rise again
+  if (scene === 'street' && standImg.naturalWidth) {
+    const iw = standImg.naturalWidth, ih = standImg.naturalHeight;
+    const sh = 230, sw = sh * ((iw * 0.75) / (ih * 0.70));
+    const gy = H * 0.84;
+    ctx.drawImage(standImg, iw * 0.10, ih * 0.14, iw * 0.75, ih * 0.70,
+      STAND_X - camX - sw / 2, gy - sh, sw, sh);
   }
 
   // door prompt
