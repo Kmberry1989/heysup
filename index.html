@@ -729,12 +729,14 @@ splash.addEventListener('click', () => {
     splashStarted = true;
     AudioSys.sfx('click');
     tapPill.style.display = 'none';
+    AudioSys.startMusic('splash');
     startSlideshow();
     startSplashChat();
   } else {
     chatTimers.forEach(clearTimeout);
     if (splashTimer) clearInterval(splashTimer);
     AudioSys.sfx('click');
+    AudioSys.startMusic('menu');
     splash.classList.add('hide');
     setTimeout(() => splash.remove(), 600);
   }
@@ -1208,7 +1210,12 @@ const SONGS = {
             bass: [0,-1,-1,-1, -1,-1,5,-1, -1,-1,-1,-1, 7,-1,5,-1],
             lead: [-1,-1,12,-1, -1,-1,-1,-1, 15,-1,-1,17, -1,-1,15,-1],
             kick: [], hat: [],
-            arp: [-1,-1,-1,-1, -1,-1,-1,-1, 12,-1,16,19, -1,23,19,16], arpType: 'sine', arpVol: 0.04, arpOct: 4 } };
+            arp: [-1,-1,-1,-1, -1,-1,-1,-1, 12,-1,16,19, -1,23,19,16], arpType: 'sine', arpVol: 0.04, arpOct: 4 },
+  splash: { bpm: 60, root: 82.4, bassType: 'sine', bassVol: 0.075, leadType: 'sine', leadVol: 0.038,
+            bass: [0,-1,-1,-1, -1,-1,-1,-1, 3,-1,-1,-1, -1,-1,-1,-1],
+            lead: [-1,-1,-1,-1, 12,-1,-1,-1, -1,-1,-1,-1, -1,-1,15,-1],
+            kick: [], hat: [],
+            arp: [-1,-1,7,-1, -1,-1,12,-1, -1,10,-1,-1, 7,-1,-1,-1], arpType: 'sine', arpVol: 0.028, arpOct: 4 } };
 function semi(root, st) { return root * Math.pow(2, st / 12); }
 const AudioSys = {
   ctx: null, muted: false, musicInt: null, mStep: 0, noiseBuf: null,

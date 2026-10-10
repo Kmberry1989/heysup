@@ -28,7 +28,7 @@
 <h1>🔊 SFX Lab</h1>
 <p class="hint">Tap each variant to hear it. Variant <b>A</b> (green outline) is what's in the game now.
 Tapping a letter <b>plays</b> it and marks it as your pick (yellow outline) for that sound.
-Every sound below has exactly one job &mdash; its assignment is under its name, including sounds reserved for features still to come.
+Every <b>variant</b> below has exactly one job &mdash; the use is printed under each letter. <b>A</b> (green) is what's in the game now; <b>B</b> and <b>C</b> are reserved for their listed jobs, including features still to come.
 Tap <b>📋</b> to copy one pick, or use <b>📋 Copy all picks</b> at the bottom, then paste them to me like <b>"portal B, whoosh C"</b>.</p>
 <div id="lab"></div>
 <button id="copyAll" style="width:100%;margin:18px 0 40px;">📋 Copy all picks</button>
@@ -160,13 +160,33 @@ const lab = document.getElementById('lab');
 for (const [name, sfx] of Object.entries(SFX)) {
   const div = document.createElement('div');
   div.className = 'sfx';
-  const notes = { click: 'short + clicky', whoosh: 'airy sweep', dive: 'falling pitch', pop: 'bright blip',
-    portal: 'big + eerie', lever: 'mechanical clunk', shimmer: 'sparkly', win: 'happy arp', lose: 'sad slide', step: 'soft thud',
-    open: 'phone opens', close: 'phone closes', tick: 'd-pad blip', flag: 'flag plant', textIn: 'message arrives',
-    textOut: 'message sent', dig: 'digging', boing: 'bouncy', coin: 'cha-ching', horn: 'race horn', thud: 'heavy hit', ring: 'ringing' };
+  // every variant has exactly one assigned use — A is in the game now, B/C are reserved for their listed jobs
+  const uses = {
+    click:   { A: 'UI taps (in game)', B: 'Toggle switches', C: 'BAM keyboard taps' },
+    whoosh:  { A: 'Door transitions (in game)', B: 'Menu screen swipes', C: 'Mall Brawl dash' },
+    dive:    { A: 'Portal dive (in game)', B: 'SkiFlea cliff jump', C: 'Arcade pit fall' },
+    pop:     { A: 'TamaGotcha feeding (in game)', B: 'Recess bubble pop', C: 'Party balloon pop' },
+    portal:  { A: 'Portal tears open (in game)', B: 'Portal closes', C: 'EMO US entrance' },
+    lever:   { A: 'Knife-switch (in game)', B: 'Arcade coin slot', C: 'Door latch' },
+    shimmer: { A: 'BROKENSPORT arrival (in game)', B: 'Photo mode flash', C: 'Unlock sparkle' },
+    win:     { A: 'Minigame victory (in game)', B: 'Kart 1st place', C: 'High-score fanfare' },
+    lose:    { A: 'Minigame defeat (in game)', B: 'Kart last place', C: 'Game-over sting' },
+    step:    { A: 'Footsteps (in game)', B: 'Mall tile steps', C: 'Sneaking steps' },
+    open:    { A: 'Phone opens (in game)', B: 'Interior door opens', C: 'Shop opens' },
+    close:   { A: 'Phone closes (in game)', B: 'Interior door closes', C: 'Window shutter' },
+    tick:    { A: 'D-pad (in game)', B: 'Menu cursor', C: 'Slot machine tick' },
+    flag:    { A: 'WEEDSWEEPER flags (in game)', B: 'Kart checkpoint', C: 'Bookmark claim' },
+    textIn:  { A: 'Incoming text (in game)', B: 'BAM group message', C: 'Voicemail beep' },
+    textOut: { A: 'Outgoing text (in game)', B: 'Delivered receipt', C: 'Photo sent' },
+    dig:     { A: 'Cell reveal (in game)', B: 'Recess sandbox dig', C: 'Crate smash' },
+    boing:   { A: 'Pet play (in game)', B: 'Trampoline', C: 'Pogo bounce' },
+    coin:    { A: 'Pickups (planned)', B: 'Jackpot cascade', C: 'Cash register' },
+    horn:    { A: 'Race start (planned)', B: 'Traffic horn', C: 'Party horn' },
+    thud:    { A: 'Brawl hits (planned)', B: 'Body slam', C: 'Door slam' },
+    ring:    { A: 'Incoming call (planned)', B: 'Doorbell', C: 'Alarm clock' } };
   let btns = '';
   for (const [v] of Object.entries(sfx.v))
-    btns += `<div class="opt"><button data-sfx="${name}" data-v="${v}" class="${v === 'A' ? 'cur' : ''}">${v}<small>${notes[name]}</small></button><button class="copy" data-copy="${name} ${v}" title="Copy this pick">\uD83D\uDCCB</button></div>`;
+    btns += `<div class="opt"><button data-sfx="${name}" data-v="${v}" class="${v === 'A' ? 'cur' : ''}">${v}<small>${uses[name][v]}</small></button><button class="copy" data-copy="${name} ${v}" title="Copy this pick">\uD83D\uDCCB</button></div>`;
   div.innerHTML = `<h2>${name}</h2><div class="desc">${sfx.desc}</div><div class="row">${btns}</div>`;
   lab.appendChild(div);
 }
