@@ -147,7 +147,7 @@ const SFX = {
     A: () => { tone(233, 0.5, 'square', 0.1); tone(175, 0.5, 'square', 0.1); },
     B: () => [196, 247, 294].forEach(f => tone(f, 0.4, 'sawtooth', 0.06)),
     C: () => { tone(440, 0.15, 'square', 0.12); tone(440, 0.15, 'square', 0.12, null, 0.2); tone(880, 0.4, 'square', 0.12, null, 0.4); } } },
-  thud: { desc: 'Mall Brawl hits (planned)', v: {
+  thud: { desc: 'Rough landing impact (in game)', v: {
     A: () => { tone(95, 0.16, 'sine', 0.16, 40); noise(0.1, 0.12, 500, 120); },
     B: () => tone(70, 0.2, 'square', 0.12, 35),
     C: () => { noise(0.16, 0.14, 350, 90); tone(120, 0.12, 'triangle', 0.1, 50, 0.02); } } },
@@ -182,7 +182,7 @@ for (const [name, sfx] of Object.entries(SFX)) {
     boing:   { A: 'Pet play (in game)', B: 'Trampoline', C: 'Pogo bounce' },
     coin:    { A: 'Pickups (planned)', B: 'Jackpot cascade', C: 'Cash register' },
     horn:    { A: 'Race start (planned)', B: 'Traffic horn', C: 'Party horn' },
-    thud:    { A: 'Brawl hits (planned)', B: 'Body slam', C: 'Door slam' },
+    thud:    { A: 'Landing impact (in game)', B: 'Brawl hits (planned)', C: 'Door slam' },
     ring:    { A: 'Incoming call (planned)', B: 'Doorbell', C: 'Alarm clock' } };
   let btns = '';
   for (const [v] of Object.entries(sfx.v))
