@@ -473,6 +473,7 @@ const scaryRockImg = new Image(); scaryRockImg.src = 'game-assets/berrypatch-roc
 const rinkImg = new Image(); rinkImg.src = 'game-assets/rink-v3.webp';
 const bowlImg = new Image(); bowlImg.src = 'game-assets/bowl-v3.webp';
 const bowlLanesImg = new Image(); bowlLanesImg.src = 'game-assets/bowl-lanes.webp';
+const mallFoodCourtImg = new Image(); mallFoodCourtImg.src = 'game-assets/mall-food-court.webp';
 const highImg = new Image(); highImg.src = 'game-assets/highschool-v3.webp';
 const felisSheetImg = new Image(); felisSheetImg.src = 'game-assets/felis-idle-sheet.webp';
 const fallHimImg = new Image(); fallHimImg.src = 'game-assets/fall-him.png';
@@ -511,8 +512,8 @@ SHEETS.him.frontWalkImg = himFrontWalkImg;
 SHEETS.her.frontWalkImg = herFrontWalkImg;
 SHEETS.him.qImg = him34Img;
 SHEETS.her.qImg = her34Img;
-const SCENE_IMG = { street: streetImg, arcade: arcadeImg, mall: mallImg, riverside: null, bowl: bowlLanesImg };
-const SCENE_BG = { street: '#7ec8f7', arcade: '#2a1a3e', mall: '#3e2a1a', riverside: '#8fd8cf', bowl: '#241a30' };
+const SCENE_IMG = { street: streetImg, arcade: arcadeImg, mall: mallImg, riverside: null, bowl: bowlLanesImg, foodcourt: mallFoodCourtImg };
+const SCENE_BG = { street: '#7ec8f7', arcade: '#2a1a3e', mall: '#3e2a1a', riverside: '#8fd8cf', bowl: '#241a30', foodcourt: '#4a3626' };
 
 const player = { x: 400, vx: 0, dir: 1, moving: false, animT: 0, heightPx: 200 };
 // Felis follows the player through the world (drawn in-canvas, not a corner HUD)
@@ -618,7 +619,7 @@ function worldW() {
   return Math.max(W, H * bgAspect(SCENE_IMG[scene]));
 }
 const DOORS = { mall: [0.84, 0.92], riverside: [0.03, 0.10], bowl: [0.68, 0.74] };
-const MALL_DOORS = { arcade: [0.30, 0.42] };
+const MALL_DOORS = { arcade: [0.30, 0.42], foodcourt: [0.62, 0.74] };
 const doorPrompt = document.getElementById('doorPrompt');
 let promptAction = null; // 'enter' | 'exit' | 'ring' | 'take' | 'build'
 function doorAt() {
@@ -692,7 +693,7 @@ function drawParallax(camX, w, dt) {
       ctx.fillRect(nx - nr, ny - nr, nr * 2, nr * 2);
     }
     drawMotes(camX, 0.5, dt);
-  } else if (scene === 'mall') {
+  } else if (scene === 'mall' || scene === 'foodcourt') {
     // warm floating dust in the food-court light
     drawMotes(camX, 0.35, dt);
     const g = ctx.createRadialGradient(W / 2, H * 0.3, 20, W / 2, H * 0.3, W * 0.5);
@@ -819,7 +820,7 @@ function tryEnter() {
     if (canBuild()) { buildStage(); return; }
     return;
   }
-  if (scene === 'mall' && mallDoorAt() === 'arcade') { enterScene('arcade', 'mall'); return; }
+  if (scene === 'mall') { const md = mallDoorAt(); if (md) { enterScene(md, 'mall'); return; } }
   if (scene === 'bowl' && nearLane()) { openBowlGame(); return; }
   const pk = partAt();
   if (pk) { takePart(pk); return; }
@@ -2573,8 +2574,7 @@ function drawPlayScene(dt) {
       ctx.fillText('arcade', ex, gy2 + 20);
     }
     // the dry fountain
-    const fx = w * 0.58 - camX;
-    ctx.fillStyle = '#9aa3b2'; ctx.beginPath(); ctx.ellipse(fx, gy - 20, 90, 26, 0, 0, 6.283); ctx.fill();
+    const fx = w * 0.58 - camX;    ctx.fillStyle = '#9aa3b2'; ctx.beginPath(); ctx.ellipse(fx, gy - 20, 90, 26, 0, 0, 6.283); ctx.fill();
     ctx.fillStyle = '#7c8494'; ctx.beginPath(); ctx.ellipse(fx, gy - 26, 70, 18, 0, 0, 6.283); ctx.fill();
     ctx.fillStyle = '#9aa3b2'; ctx.fillRect(fx - 10, gy - 110, 20, 90);
     ctx.fillStyle = '#b9c0cc'; ctx.beginPath(); ctx.ellipse(fx, gy - 112, 34, 10, 0, 0, 6.283); ctx.fill();
@@ -2586,6 +2586,17 @@ function drawPlayScene(dt) {
     const dy = gy - 108 + dcyc * 80;
     ctx.fillStyle = 'rgba(140,190,240,' + (1 - dcyc).toFixed(2) + ')';
     ctx.beginPath(); ctx.ellipse(fx + 6, dy, 4, 6, 0, 0, 6.283); ctx.fill();
+    // food court doorway
+    {
+      const ex = w * 0.68 - camX;
+      ctx.fillStyle = '#1a0f0a'; ctx.fillRect(ex - 55, gy - 190, 110, 190);
+      ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 4; ctx.strokeRect(ex - 55, gy - 190, 110, 190);
+      ctx.fillStyle = '#ffd23f'; ctx.font = 'bold 17px system-ui';
+      ctx.fillText('FOOD', ex, gy - 232);
+      ctx.fillText('COURT', ex, gy - 212);
+      ctx.fillStyle = '#ff9d5c'; ctx.font = 'bold 11px system-ui';
+      ctx.fillText('🍔', ex, gy + 20);
+    }
   }
 
   // Riverslide Park: the Mental Carousel pavilion + escaped zany animals
@@ -2621,9 +2632,17 @@ function drawPlayScene(dt) {
     }
   }
 
-  // Meyers Snort Hole interior: neon name sign over the lanes
-  if (scene === 'bowl') {
+  // food court: the photo bg does the talking, just a small hanging sign
+  if (scene === 'foodcourt') {
     ctx.textAlign = 'center';
+    ctx.fillStyle = '#2c1a0e'; ctx.fillRect(W / 2 - 130, 20, 260, 44);
+    ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 3; ctx.strokeRect(W / 2 - 130, 20, 260, 44);
+    ctx.fillStyle = '#ffd23f'; ctx.font = 'bold 22px system-ui';
+    ctx.fillText('FOOD COURT', W / 2, 50);
+  }
+
+  // Meyers Snort Hole interior: neon name sign over the lanes
+  if (scene === 'bowl') {    ctx.textAlign = 'center';
     const gl2 = 0.75 + 0.25 * Math.sin(bgT * 3);
     ctx.fillStyle = 'rgba(20,10,30,' + (0.55 * gl2).toFixed(3) + ')';
     ctx.fillRect(W / 2 - 200, 14, 400, 58);
@@ -2656,10 +2675,11 @@ function drawPlayScene(dt) {
     const md = mallDoorAt();
     const pk = partAt();
     if (md === 'arcade') { doorPrompt.textContent = '▲ The Okay Space'; promptAction = 'enter'; }
+    else if (md === 'foodcourt') { doorPrompt.textContent = '▲ Food Court 🍔'; promptAction = 'enter'; }
     else if (pk) { doorPrompt.textContent = '✋ take the ' + PART_INFO[pk].label; promptAction = 'take'; }
     else { doorPrompt.textContent = '▼ back to the street'; promptAction = 'exit'; }
     doorPrompt.classList.add('show');
-  } else if (scene === 'arcade') {
+  } else if (scene === 'arcade' || scene === 'foodcourt') {
     doorPrompt.textContent = '▼ back to the mall'; doorPrompt.classList.add('show'); promptAction = 'exit';
   } else if (scene === 'bowl') {
     if (nearLane()) { doorPrompt.textContent = '🎳 bowl a frame!'; promptAction = 'bowl'; }
