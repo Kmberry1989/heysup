@@ -370,7 +370,7 @@
 </div>
 <div id="ringGame">
   <div id="ringCard">
-    <img class="bg" src="game-assets/logan-carousel-interior.jpg" alt="The Dentzel carousel">
+    <img class="bg" src="game-assets/carousel-interior-chibi.webp" alt="The Dentzel carousel">
     <div id="ringScore">🎠 brass rings: 0</div>
     <div id="ringArm"></div>
     <div id="ringZone"></div>
@@ -432,8 +432,8 @@ const arcadeImg = new Image(); arcadeImg.src = 'game-assets/arcade.webp';
 const mallImg = new Image(); mallImg.src = 'game-assets/mall.webp';
 const signImg = new Image(); signImg.src = 'game-assets/sign.png';
 const grassImg = new Image(); grassImg.src = 'game-assets/grass-strip.webp';
-const theatreImg = new Image(); theatreImg.src = 'game-assets/logan-state-theatre-1984.jpg';
-const carouselImg = new Image(); carouselImg.src = 'game-assets/logan-carousel-1989.jpg';
+const theatreImg = new Image(); theatreImg.src = 'game-assets/theatre-chibi.webp';
+const carouselImg = new Image(); carouselImg.src = 'game-assets/carousel-chibi.webp';
 const fallHimImg = new Image(); fallHimImg.src = 'game-assets/fall-him.png';
 const fallHerImg = new Image(); fallHerImg.src = 'game-assets/fall-her.png';
 const diveHimImg = new Image(); diveHimImg.src = 'game-assets/dive-him.png';
@@ -2057,7 +2057,7 @@ function drawPlayScene(dt) {
       STAND_X - camX - sw / 2, gy - sh, sw, sh);
   }
 
-  // the old State Theatre — the real 1984 facade
+  // the old State Theatre — chibi recreation of the real 1984 facade
   if (scene === 'street' && theatreImg.naturalWidth) {
     const th = 250, tw = th * (theatreImg.naturalWidth / theatreImg.naturalHeight);
     const gy = H * 0.84;
@@ -2125,7 +2125,7 @@ function drawPlayScene(dt) {
     ctx.fillText('OUT OF ORDER SINCE 1998', fx, gy - 44);
   }
 
-  // Riverside Park: the Dentzel carousel — the real 1989 photo
+  // Riverside Park: the Dentzel carousel — chibi recreation of the real 1989 ride
   if (scene === 'riverside' && carouselImg.naturalWidth) {
     const ch = 300, cw = ch * (carouselImg.naturalWidth / carouselImg.naturalHeight);
     const gy = H * 0.84;
