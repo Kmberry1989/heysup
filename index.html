@@ -464,7 +464,7 @@ const arcadeImg = new Image(); arcadeImg.src = 'game-assets/arcade.webp';
 const mallImg = new Image(); mallImg.src = 'game-assets/mall.webp';
 const signImg = new Image(); signImg.src = 'game-assets/sign.png';
 const grassImg = new Image(); grassImg.src = 'game-assets/grass-strip.webp';
-const theatreImg = new Image(); theatreImg.src = 'game-assets/theatre-stale-v3.webp';
+const theatreImg = new Image(); theatreImg.src = 'game-assets/theatre-stale-v4.webp';
 const carouselImg = new Image(); carouselImg.src = 'game-assets/carousel-building.webp';
 const cGoatImg = new Image(); cGoatImg.src = 'game-assets/carousel-goat.webp';
 const cGiraffeImg = new Image(); cGiraffeImg.src = 'game-assets/carousel-giraffe.webp';
@@ -2479,11 +2479,11 @@ function drawPlayScene(dt) {
     const gy = H * 0.84;
     const tx = THEATRE_X - camX - tw / 2, ty = gy - th;
     ctx.drawImage(theatreImg, tx, ty, tw, th);
-    // marquee chase lights
-    for (const rowY of [0.51, 0.64]) {
-      const n = 14;
+    // marquee chase lights (v4 front facade: two bulb rows on the canopy)
+    for (const rowY of [0.62, 0.76]) {
+      const n = 16;
       for (let i = 0; i < n; i++) {
-        const fx = 0.22 + (0.54 - 0.22) * (i / (n - 1));
+        const fx = 0.30 + (0.70 - 0.30) * (i / (n - 1));
         const br = 0.35 + 0.65 * Math.max(0, Math.sin(bgT * 7 - i * 0.85));
         ctx.fillStyle = 'rgba(255,214,90,' + br.toFixed(2) + ')';
         ctx.beginPath(); ctx.arc(tx + fx * tw, ty + rowY * th, 4.5, 0, 6.283); ctx.fill();
