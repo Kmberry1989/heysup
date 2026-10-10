@@ -267,8 +267,7 @@
     font-weight:800; font-size:14px; text-shadow:0 2px 4px #000; }
   #ringClose { position:absolute; top:8px; right:8px; width:36px; height:36px; border-radius:50%;
     border:none; background:rgba(0,0,0,.55); color:#fff; font-size:18px; cursor:pointer; }
-  #squirmy .berrytag { font-size:10px; font-weight:800; color:#7CFC00; text-align:center;
-    margin-top:2px; text-shadow:0 1px 2px #000; letter-spacing:1px; }
+  #squirmy .felisface, #squirmy .berrytag { display:none; } /* Felis lives in the world now, not the corner */
   #toast { position:fixed; left:50%; bottom:calc(110px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
     background:rgba(10,10,20,.9); color:#fff; padding:8px 18px; border-radius:999px;
     font-size:13px; z-index:20; display:none; }
@@ -432,8 +431,9 @@ const arcadeImg = new Image(); arcadeImg.src = 'game-assets/arcade.webp';
 const mallImg = new Image(); mallImg.src = 'game-assets/mall.webp';
 const signImg = new Image(); signImg.src = 'game-assets/sign.png';
 const grassImg = new Image(); grassImg.src = 'game-assets/grass-strip.webp';
-const theatreImg = new Image(); theatreImg.src = 'game-assets/theatre-chibi.webp';
-const carouselImg = new Image(); carouselImg.src = 'game-assets/carousel-chibi.webp';
+const theatreImg = new Image(); theatreImg.src = 'game-assets/theatre-v2.webp';
+const carouselImg = new Image(); carouselImg.src = 'game-assets/carousel-v2.webp';
+const felisSheetImg = new Image(); felisSheetImg.src = 'game-assets/felis-idle-sheet.webp';
 const fallHimImg = new Image(); fallHimImg.src = 'game-assets/fall-him.png';
 const fallHerImg = new Image(); fallHerImg.src = 'game-assets/fall-her.png';
 const diveHimImg = new Image(); diveHimImg.src = 'game-assets/dive-him.png';
@@ -459,6 +459,9 @@ const SCENE_IMG = { street: streetImg, arcade: arcadeImg, mall: mallImg, riversi
 const SCENE_BG = { street: '#7ec8f7', arcade: '#2a1a3e', mall: '#3e2a1a', riverside: '#8fd8cf' };
 
 const player = { x: 400, vx: 0, dir: 1, moving: false, animT: 0, heightPx: 200 };
+// Felis follows the player through the world (drawn in-canvas, not a corner HUD)
+const felis = { x: 700, dir: -1 };
+let lastCamX = 0;
 let char = 'him';
 let scene = 'street';
 let enteredFrom = null; // which street door we used
@@ -478,7 +481,10 @@ const activeTouches = new Map();
 function touchDir(t) { return t.clientX < W / 2 ? 'left' : 'right'; }
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
-  for (const t of e.changedTouches) activeTouches.set(t.identifier, touchDir(t));
+  for (const t of e.changedTouches) {
+    if (mode === 'play' && felisHit(t.clientX, t.clientY)) felisTaps.add(t.identifier);
+    else activeTouches.set(t.identifier, touchDir(t));
+  }
   updateTouch();
 }, {passive:false});
 canvas.addEventListener('touchmove', e => {
@@ -487,7 +493,10 @@ canvas.addEventListener('touchmove', e => {
   updateTouch();
 }, {passive:false});
 function touchEnd(e) {
-  for (const t of e.changedTouches) activeTouches.delete(t.identifier);
+  for (const t of e.changedTouches) {
+    if (felisTaps.delete(t.identifier)) felisTap();
+    activeTouches.delete(t.identifier);
+  }
   updateTouch();
 }
 canvas.addEventListener('touchend', touchEnd);
@@ -497,8 +506,14 @@ function updateTouch() {
   for (const d of activeTouches.values()) d === 'left' ? touchLeft = true : touchRight = true;
 }
 let mouseDown = false, mouseDir = null;
-canvas.addEventListener('mousedown', e => { mouseDown = true; mouseDir = touchDir(e); });
-window.addEventListener('mouseup', () => { mouseDown = false; mouseDir = null; });
+canvas.addEventListener('mousedown', e => {
+  if (mode === 'play' && felisHit(e.clientX, e.clientY)) { mouseFelis = true; return; }
+  mouseDown = true; mouseDir = touchDir(e);
+});
+window.addEventListener('mouseup', () => {
+  if (mouseFelis) { mouseFelis = false; felisTap(); return; }
+  mouseDown = false; mouseDir = null;
+});
 window.addEventListener('mousemove', e => { if (mouseDown) mouseDir = touchDir(e); });
 
 // onscreen touch controller (shows on touch devices)
@@ -541,6 +556,7 @@ function worldW() {
 }
 const DOORS = { arcade: [0.60, 0.70], mall: [0.80, 0.90], riverside: [0.03, 0.10] };
 const doorPrompt = document.getElementById('doorPrompt');
+let promptAction = null; // 'enter' | 'exit' | 'ring' | 'take' | 'build'
 function doorAt() {
   const w = worldW(), zx = player.x / w;
   for (const k of Object.keys(DOORS)) {
@@ -710,19 +726,26 @@ function nearCarousel() {
 }
 function tryEnter() {
   if (TRANS.active) return;
-  if (scene === 'riverside') { if (nearCarousel()) openRingGame(); return; }
-  if (scene !== 'street') return;
-  const d = doorAt();
-  if (d) {
-    AudioSys.sfx('whoosh');
-    startTransition('iris', 0.8, () => {
-      enteredFrom = d; scene = d; player.x = worldW() * 0.5; player.animT = 0;
-      AudioSys.startMusic(d);
-      if (d === 'arcade') squirmyTip('arcade', 'The arcade! Mullet Kart grudge matches go down here. Check the Events app on your phone!');
-      if (d === 'mall') squirmyTip('mall', 'BROKENSPORT Mall — Shears, JCPenny, and a fountain that gave up in \u201998.');
-      if (d === 'riverside') squirmyTip('riverside', 'Riverside Park! The old Dentzel carousel — grab the brass ring, win a free ride! 🎠');
-    });
+  if (scene === 'street') {
+    const d = doorAt();
+    if (d) {
+      AudioSys.sfx('whoosh');
+      startTransition('iris', 0.8, () => {
+        enteredFrom = d; scene = d; player.x = worldW() * 0.5; player.animT = 0;
+        felis.x = player.x - 150; felis.dir = 1;
+        AudioSys.startMusic(d);
+        if (d === 'arcade') squirmyTip('arcade', 'The arcade! Mullet Kart grudge matches go down here. Check the Events app on your phone!');
+        if (d === 'mall') squirmyTip('mall', 'BROKENSPORT Mall — Shears, JCPenny, and a fountain that gave up in \u201998.');
+        if (d === 'riverside') squirmyTip('riverside', 'Riverside Park! The old Dentzel carousel — grab the brass ring, win a free ride! 🎠');
+      });
+      return;
+    }
+    if (canBuild()) { buildStage(); return; }
+    return;
   }
+  const pk = partAt();
+  if (pk) { takePart(pk); return; }
+  if (scene === 'riverside' && nearCarousel()) { openRingGame(); return; }
 }
 function tryExit() {
   if (scene === 'street' || !enteredFrom || TRANS.active) return;
@@ -732,13 +755,13 @@ function tryExit() {
     scene = 'street'; enteredFrom = null;
     AudioSys.startMusic('street');
     player.x = worldW() * ((DOORS[d][0] + DOORS[d][1]) / 2); player.animT = 0;
+    felis.x = player.x - 150; felis.dir = 1;
   });
 }
 doorPrompt.addEventListener('click', () => {
   AudioSys.sfx('click');
-  if (scene === 'street') tryEnter();
-  else if (scene === 'riverside' && nearCarousel()) openRingGame();
-  else tryExit();
+  if (promptAction === 'exit') tryExit();
+  else tryEnter();
 });
 
 // squirmy helper
@@ -755,7 +778,8 @@ function squirmyTip(key, text) {
   clearTimeout(sqTimer);
   sqTimer = setTimeout(() => squirmyEl.classList.remove('show'), 7000);
 }
-squirmyEl.addEventListener('click', () => {
+function felisTap() {
+  AudioSys.sfx('click');
   if (tour && tour.step === 0 && tour.seq < 2) { // tap Felis to hurry the intro exchange
     clearTimeout(tour.seqTimer);
     tourSeqNext();
@@ -764,7 +788,15 @@ squirmyEl.addEventListener('click', () => {
   if (tour) { const line = currentTourLine(); if (line) tourSay(line); return; }
   squirmyEl.classList.remove('show');
   clearTimeout(sqTimer);
-});
+}
+squirmyEl.addEventListener('click', felisTap);
+// taps on world-Felis (not the corner) steer here instead of moving the player
+const felisTaps = new Set();
+let mouseFelis = false;
+function felisHit(cx, cy) {
+  const fsx = felis.x - lastCamX, fsy = H * 0.84 - 55;
+  return Math.hypot(cx - fsx, cy - fsy) < 80;
+}
 
 // ---- guided tour: Squirmy walks the player through the basics ----
 // TOUR_LINES is filled from the player's dialogue-lab picks; while it's
@@ -779,10 +811,9 @@ const TOUR_LINES = {
   finale: "Home base, baby! Remember this spot. Now get out there and find each other. Word up! \uD83C\uDF2A\uFE0F",
 };
 const STAND_X = 620; // the stand site, on the street
-const THEATRE_X = 1150; // the old State Theatre (1984 photo)
+const THEATRE_X = 1100; // the old State Theatre (transparent chibi)
 const DRIVEIN_X = 2360; // Brokenline Drive-In sign
-const COLE_X = 1420; // Cole's Hardwood sign
-const POSTER_X = 890; // Taste of Broken County poster
+const POSTER_X = 1450; // Taste of Broken County poster
 let tour = null, tourStartX = 0, tourWeedPlayed = false;
 const tourBanner = document.getElementById('tourBanner');
 const tourObj = document.getElementById('tourObj');
@@ -860,6 +891,135 @@ function finishTour() {
     try { localStorage.setItem('heysup_tour', '1'); } catch (e) {}
     tour = null;
   }, 6000);
+}
+
+// ---- the makeshift stand: built piece by piece ----
+// stages: 0 = staked lot, 1 = frame, 2 = plywood + tarp roof, 3 = sign + window (complete)
+let standStage = 0, standPart = null;
+try {
+  standStage = parseInt(localStorage.getItem('heysup_stand') || '0', 10) || 0;
+  standPart = localStorage.getItem('heysup_stand_part') || null;
+} catch (e) {}
+function saveStand() {
+  try {
+    localStorage.setItem('heysup_stand', String(standStage));
+    if (standPart) localStorage.setItem('heysup_stand_part', standPart);
+    else localStorage.removeItem('heysup_stand_part');
+  } catch (e) {}
+}
+function tourDone() {
+  try { return localStorage.getItem('heysup_tour') === '1'; } catch (e) { return false; }
+}
+const PART_INFO = {
+  planks: { label: 'planks', scene: 'riverside', fx: 0.80 },
+  tarp:   { label: 'a tarp', scene: 'mall', fx: 0.30 },
+  paint:  { label: 'paint', scene: 'arcade', fx: 0.70 },
+};
+const STAGE_PART = ['planks', 'tarp', 'paint']; // what stage 0/1/2 needs next
+const BUILD_TOAST = ['frame raised!', 'walls and roof up!', 'sign\u2019s painted!'];
+const QUEST_TEXT = [
+  '🔨 The stand is sticks and dreams. Find planks at Riverside Park',
+  '🔨 Bring the planks back to the stand site',
+  '🔨 Frame\u2019s up! Find a tarp at the mall',
+  '🔨 Bring the tarp back to the stand site',
+  '🔨 Looking cozy. Find paint at the arcade',
+  '🔨 Bring the paint back to the stand site',
+];
+function questActive() { return !tour && tourDone() && standStage < 3; }
+function neededPart() { return questActive() && !standPart ? STAGE_PART[standStage] : null; }
+function partAt() {
+  const key = neededPart();
+  if (!key) return null;
+  const p = PART_INFO[key];
+  if (scene !== p.scene) return null;
+  return Math.abs(player.x - worldW() * p.fx) < 110 ? key : null;
+}
+function nearStandSite() { return scene === 'street' && Math.abs(player.x - STAND_X) < 150; }
+function canBuild() { return questActive() && standPart === STAGE_PART[standStage] && nearStandSite(); }
+function takePart(key) {
+  standPart = key; saveStand();
+  AudioSys.sfx('coin');
+  toast('got ' + PART_INFO[key].label + '!');
+}
+function buildStage() {
+  standPart = null;
+  standStage++;
+  saveStand();
+  AudioSys.sfx('win');
+  if (standStage >= 3) toast('🌭 The stand lives! Grand re-opening soon…');
+  else toast('🔨 ' + BUILD_TOAST[standStage - 1]);
+}
+function updateQuestBanner() {
+  if (!questActive()) { tourBanner.classList.remove('show'); return; }
+  tourObj.textContent = QUEST_TEXT[standStage * 2 + (standPart ? 1 : 0)];
+  tourCount.textContent = '🔨 ' + standStage + '/3';
+  tourBanner.classList.add('show');
+}
+function drawStand(sx, gy, stage) {
+  ctx.textAlign = 'center';
+  if (stage === 0) {
+    // staked lot with a string outline
+    ctx.fillStyle = '#8a6a45';
+    for (const ox of [-90, 90]) ctx.fillRect(sx + ox - 4, gy - 34, 8, 34);
+    ctx.strokeStyle = '#e8dcc0'; ctx.lineWidth = 2; ctx.setLineDash([6, 5]);
+    ctx.beginPath(); ctx.moveTo(sx - 90, gy - 30); ctx.lineTo(sx + 90, gy - 30); ctx.stroke();
+    ctx.setLineDash([]);
+    return;
+  }
+  // posts + beams
+  ctx.fillStyle = '#7a5c38';
+  for (const ox of [-70, 70]) ctx.fillRect(sx + ox - 7, gy - 150, 14, 150);
+  ctx.fillRect(sx - 84, gy - 158, 168, 12);
+  if (stage === 1) return;
+  // plywood walls + saggy tarp roof
+  ctx.fillStyle = '#a08050';
+  ctx.fillRect(sx - 70, gy - 140, 140, 140);
+  ctx.fillStyle = 'rgba(0,0,0,.12)';
+  for (let i = 1; i < 5; i++) ctx.fillRect(sx - 70, gy - 140 + i * 28, 140, 3);
+  ctx.fillStyle = '#2e6fd8';
+  ctx.beginPath();
+  ctx.moveTo(sx - 92, gy - 158); ctx.quadraticCurveTo(sx, gy - 136, sx + 92, gy - 158);
+  ctx.lineTo(sx + 92, gy - 174); ctx.quadraticCurveTo(sx, gy - 152, sx - 92, gy - 174);
+  ctx.closePath(); ctx.fill();
+  if (stage === 2) return;
+  // hand-painted sign + serving window
+  ctx.save();
+  ctx.translate(sx, gy - 198); ctx.rotate(-0.04);
+  ctx.fillStyle = '#f5e6c8'; ctx.fillRect(-85, -22, 170, 40);
+  ctx.strokeStyle = '#5a4a3a'; ctx.lineWidth = 3; ctx.strokeRect(-85, -22, 170, 40);
+  ctx.fillStyle = '#c0392b'; ctx.font = 'bold 20px system-ui';
+  ctx.fillText('CHILI DOGS', 0, 7);
+  ctx.restore();
+  ctx.fillStyle = '#2b2118';
+  ctx.fillRect(sx - 45, gy - 118, 90, 58);
+  ctx.fillStyle = 'rgba(255,220,150,.28)';
+  ctx.fillRect(sx - 45, gy - 118, 90, 12);
+}
+function drawPartProp(key, px, gy) {
+  if (key === 'planks') {
+    ctx.fillStyle = '#8a6a45';
+    ctx.fillRect(px - 45, gy - 14, 90, 12);
+    ctx.fillStyle = '#a08050';
+    ctx.fillRect(px - 40, gy - 26, 84, 12);
+    ctx.fillStyle = '#7a5c38';
+    ctx.fillRect(px - 35, gy - 38, 78, 12);
+  } else if (key === 'tarp') {
+    ctx.fillStyle = '#2e6fd8';
+    ctx.beginPath(); ctx.ellipse(px, gy - 18, 42, 20, 0, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = '#1c4fa0'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(px, gy - 18, 42, 20, 0, 0, 6.283); ctx.stroke();
+    ctx.strokeStyle = '#e8dcc0'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(px - 30, gy - 26); ctx.lineTo(px + 30, gy - 10); ctx.stroke();
+  } else if (key === 'paint') {
+    ctx.fillStyle = '#c0392b';
+    ctx.fillRect(px - 20, gy - 44, 40, 44);
+    ctx.fillStyle = '#8e2a20';
+    ctx.fillRect(px - 20, gy - 44, 40, 8);
+    ctx.fillStyle = '#e8dcc0';
+    ctx.fillRect(px - 14, gy - 36, 28, 16);
+    ctx.fillStyle = '#c0392b'; ctx.font = 'bold 9px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('PAINT', px, gy - 24);
+  }
 }
 
 // ---- splash screen: black + tap pill until the first tap, then the show ----
@@ -1440,7 +1600,11 @@ function drawIntro(dt) {
     if (INTRO.kyleT < runDur) {
       const p = INTRO.kyleT / runDur;
       const f = frames[Math.floor(INTRO.kyleT * 14) % frames.length];
-      drawSheetFrame(INTRO.hSheet.img, f, xStart + ((wx + 70) - xStart) * p, gy, 0.95, 0);
+      const rx = xStart + ((wx + 70) - xStart) * p;
+      ctx.save(); // hero runs left — face the travel direction
+      ctx.translate(rx, 0); ctx.scale(-1, 1); ctx.translate(-rx, 0);
+      drawSheetFrame(INTRO.hSheet.img, f, rx, gy, 0.95, 0);
+      ctx.restore();
     } else if (INTRO.kyleT < runDur + diveDur) {
       const p = (INTRO.kyleT - runDur) / diveDur;
       const x0 = wx + 70, y0 = gy;
@@ -2013,10 +2177,22 @@ function frame(now) {
     player.stepT = 0;
   }
 
+  // Felis trails the player through the world
+  {
+    const w = worldW();
+    const target = Math.max(60, Math.min(w - 60, player.x - player.dir * 170));
+    const prev = felis.x;
+    felis.x += (target - felis.x) * Math.min(1, dt * 3.5);
+    if (Math.abs(felis.x - prev) > 0.4) felis.dir = felis.x > prev ? 1 : -1;
+    felis.x = Math.max(60, Math.min(w - 60, felis.x));
+  }
+
   drawPlayScene(dt);
 
   // guided tour: advance when the current step's condition is met
   if (tour && TOUR_STEPS[tour.step].check()) tourAdvance();
+  // makeshift-stand quest tracker
+  if (!tour) updateQuestBanner();
 
   requestAnimationFrame(frame);
 }
@@ -2048,18 +2224,21 @@ function drawPlayScene(dt) {
     ctx.drawImage(signImg, 200 - camX - sw / 2, gy - sh + 8, sw, sh);
   }
 
-  // the stand site — where the chili dog stand will rise again
-  if (scene === 'street' && standImg.naturalWidth) {
-    const iw = standImg.naturalWidth, ih = standImg.naturalHeight;
-    const sh = 230, sw = sh * ((iw * 0.75) / (ih * 0.70));
-    const gy = H * 0.84;
-    ctx.drawImage(standImg, iw * 0.10, ih * 0.14, iw * 0.75, ih * 0.70,
-      STAND_X - camX - sw / 2, gy - sh, sw, sh);
+  // the stand site — a makeshift stand, built piece by piece
+  if (scene === 'street') drawStand(STAND_X - camX, H * 0.84, standStage);
+
+  // quest part pickup props
+  {
+    const pk = neededPart();
+    if (pk) {
+      const p = PART_INFO[pk];
+      if (scene === p.scene) drawPartProp(pk, worldW() * p.fx - camX, H * 0.84);
+    }
   }
 
-  // the old State Theatre — chibi recreation of the real 1984 facade
+  // the old State Theatre — chibi recreation with transparency, drawn big
   if (scene === 'street' && theatreImg.naturalWidth) {
-    const th = 250, tw = th * (theatreImg.naturalWidth / theatreImg.naturalHeight);
+    const th = 380, tw = th * (theatreImg.naturalWidth / theatreImg.naturalHeight);
     const gy = H * 0.84;
     ctx.drawImage(theatreImg, THEATRE_X - camX - tw / 2, gy - th, tw, th);
   }
@@ -2077,16 +2256,6 @@ function drawPlayScene(dt) {
     ctx.fillText('DRIVE-IN', sx, gy - 238);
     ctx.fillStyle = '#0e0e16'; ctx.fillRect(sx - 70, gy - 150, 140, 80);
     ctx.fillStyle = 'rgba(160,200,255,.25)'; ctx.fillRect(sx - 70, gy - 150, 140, 80);
-  }
-
-  // Cole's Hardwood — scorched sign
-  if (scene === 'street') {
-    const sx = COLE_X - camX, gy = H * 0.84;
-    ctx.fillStyle = '#4a3220'; ctx.fillRect(sx - 4, gy - 96, 8, 96);
-    ctx.fillStyle = '#6b4a2f'; ctx.fillRect(sx - 65, gy - 132, 130, 38);
-    ctx.fillStyle = '#2b1c10'; ctx.fillRect(sx - 65, gy - 132, 130, 7);
-    ctx.fillStyle = '#f5e6c8'; ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center';
-    ctx.fillText("COLE'S HARDWOOD", sx, gy - 107);
   }
 
   // Taste of Broken County poster at the stand site
@@ -2125,28 +2294,54 @@ function drawPlayScene(dt) {
     ctx.fillText('OUT OF ORDER SINCE 1998', fx, gy - 44);
   }
 
-  // Riverside Park: the Dentzel carousel — chibi recreation of the real 1989 ride
+  // Riverside Park: the Dentzel carousel — chibi recreation with transparency, drawn big
   if (scene === 'riverside' && carouselImg.naturalWidth) {
-    const ch = 300, cw = ch * (carouselImg.naturalWidth / carouselImg.naturalHeight);
+    const ch = 460, cw = ch * (carouselImg.naturalWidth / carouselImg.naturalHeight);
     const gy = H * 0.84;
     ctx.drawImage(carouselImg, w * 0.55 - camX - cw / 2, gy - ch, cw, ch);
     ctx.fillStyle = 'rgba(0,0,0,.30)'; ctx.font = 'bold 13px system-ui'; ctx.textAlign = 'center';
     ctx.fillText('🎠 the Dentzel carousel', w * 0.55 - camX, gy + 18);
   }
 
-  // door prompt
+  // door / interact prompt
+  promptAction = null;
   if (scene === 'street') {
     const d = doorAt();
-    if (d === 'arcade') { doorPrompt.textContent = '▲ enter the arcade'; doorPrompt.classList.add('show'); }
-    else if (d === 'mall') { doorPrompt.textContent = '▲ BROKENSPORT Mall'; doorPrompt.classList.add('show'); }
-    else if (d === 'riverside') { doorPrompt.textContent = '▲ Riverside Park'; doorPrompt.classList.add('show'); }
+    if (d === 'arcade') { doorPrompt.textContent = '▲ enter the arcade'; promptAction = 'enter'; }
+    else if (d === 'mall') { doorPrompt.textContent = '▲ BROKENSPORT Mall'; promptAction = 'enter'; }
+    else if (d === 'riverside') { doorPrompt.textContent = '▲ Riverside Park'; promptAction = 'enter'; }
+    else if (canBuild()) { doorPrompt.textContent = '🔨 build the stand'; promptAction = 'build'; }
+    if (promptAction) doorPrompt.classList.add('show');
     else doorPrompt.classList.remove('show');
-  } else if (scene === 'riverside' && nearCarousel()) {
-    doorPrompt.textContent = '🎠 grab the brass ring!';
-    doorPrompt.classList.add('show');
   } else {
-    doorPrompt.textContent = '▼ back to the street';
-    doorPrompt.classList.add('show');
+    const pk = partAt();
+    if (pk) { doorPrompt.textContent = '✋ take the ' + PART_INFO[pk].label; doorPrompt.classList.add('show'); promptAction = 'take'; }
+    else if (scene === 'riverside' && nearCarousel()) { doorPrompt.textContent = '🎠 grab the brass ring!'; doorPrompt.classList.add('show'); promptAction = 'ring'; }
+    else { doorPrompt.textContent = '▼ back to the street'; doorPrompt.classList.add('show'); promptAction = 'exit'; }
+  }
+
+  // Felis, in the world — 4-frame idle sheet, 2.4s loop
+  if (felisSheetImg.naturalWidth) {
+    const fw = felisSheetImg.naturalWidth / 4, fh = felisSheetImg.naturalHeight;
+    const fr = Math.floor(bgT / 0.6) % 4;
+    const fhPx = 100, fwPx = fhPx * (fw / fh);
+    const fx = felis.x - camX, fy = H * 0.84;
+    ctx.fillStyle = 'rgba(0,0,0,.15)';
+    ctx.beginPath(); ctx.ellipse(fx, fy + 6, fwPx * 0.3, 8, 0, 0, 6.283); ctx.fill();
+    ctx.save();
+    if (felis.dir < 0) { ctx.translate(fx, 0); ctx.scale(-1, 1); ctx.translate(-fx, 0); }
+    ctx.drawImage(felisSheetImg, fr * fw, 0, fw, fh, fx - fwPx / 2, fy - fhPx, fwPx, fhPx);
+    ctx.restore();
+    ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('Felis', fx, fy - fhPx - 8);
+  }
+  lastCamX = camX;
+
+  // Felis's bubble floats above him in the world
+  if (squirmyEl.classList.contains('show')) {
+    const fsx = felis.x - camX;
+    squirmyEl.style.left = Math.max(8, Math.min(W - 170, fsx - 80)) + 'px';
+    squirmyEl.style.bottom = (H * 0.16 + 112) + 'px';
   }
 
   // player — shared animation
