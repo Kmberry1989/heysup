@@ -45,7 +45,7 @@ Tap <b>📋</b> to copy that pick, or tap lines to mark your picks and use <b>Co
 <div id="preview"><span class="empty">tap a line to preview it here</span></div>
 <div id="lab"></div>
 <h1 style="margin-top:26px">🧭 Guided Tour</h1>
-<p class="hint">Squirmy's tutorial walk — pick his lines the same way. These go live in the game once you've chosen all six.</p>
+<p class="hint">Felis's tutorial walk — pick his lines the same way. These go live in the game once you've chosen them all.</p>
 <div id="labTour"></div>
 <button id="copyPicks">📋 Copy my picks</button>
 <script>
@@ -135,12 +135,16 @@ const lab = document.getElementById('lab');
 const labTour = document.getElementById('labTour');
 const picks = {};
 const ABC = ['A', 'B', 'C'];
-// ---- guided-tour beats: Squirmy teaches the basics ----
+// ---- guided-tour beats: Felis teaches the basics ----
 const TOUR_BEATS = [
-  { n: 'T0', ctx: 'Tour start, on the street — Squirmy greets you + teaches walking', opts: [
-    'Yo! I\u2019m Squirmy \u2014 welcome to BROKENSPORT! Walk with the arrow keys, or the D-pad on your phone!',
-    'Heyyy, you made it! I\u2019m Squirmy, your tour guide. Arrow keys or D-pad \u2014 go on, take a walk!',
-    'Whew, what a landing! I\u2019m Squirmy. Walk with \u25C0 \u25B6 \u2014 try it out!' ] },
+  { n: 'T0', ctx: 'Tour start, on the street — Felis greets you + teaches walking', opts: [
+    'Yo! I\u2019m Felis \u2014 welcome to BROKENSPORT!! Walk with the arrow keys, or the D-pad on your phone!',
+    'Heyyy, you made it! I\u2019m Felis, your tour guide! Arrow keys or D-pad \u2014 go on, take a walk!',
+    'Whew, WHAT a landing! I\u2019m Felis! Walk with \u25C0 \u25B6 \u2014 try it out!' ] },
+  { n: 'TN', ctx: 'First meeting — you ask \u201CFelix? Is that you?\u201D and Felis explains his name (plays right after the greeting)', opts: [
+    'Close! Felix is named after me \u2014 well, after my name. Felis. It\u2019s Latin for \u2018cat.\u2019 I\u2019m the genus, kid. The original article.',
+    'Ha! I get that a lot. Nah \u2014 I\u2019m Felis. Latin, means \u2018cat.\u2019 Felix just borrowed it and got famous.',
+    'Nope! Felis \u2014 F-E-L-I-S. Latin for cat, the science-y name. Felix wishes he had my roots.' ] },
   { n: 'T1', ctx: 'Step 1 done — head into the arcade', opts: [
     'Nice moves! See that door? That\u2019s the arcade \u2014 walk up and tap \u25B2!',
     'A natural! The arcade\u2019s through that door. Go on in, I\u2019ll be right here.',
