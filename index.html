@@ -369,7 +369,7 @@
 </div>
 <div id="ringGame">
   <div id="ringCard">
-    <img class="bg" src="game-assets/carousel-interior-chibi.webp" alt="The Dentzel carousel">
+    <img class="bg" src="game-assets/carousel-interior-chibi.webp" alt="The Brass Ring Carousel">
     <div id="ringScore">🎠 brass rings: 0</div>
     <div id="ringArm"></div>
     <div id="ringZone"></div>
@@ -431,8 +431,11 @@ const arcadeImg = new Image(); arcadeImg.src = 'game-assets/arcade.webp';
 const mallImg = new Image(); mallImg.src = 'game-assets/mall.webp';
 const signImg = new Image(); signImg.src = 'game-assets/sign.png';
 const grassImg = new Image(); grassImg.src = 'game-assets/grass-strip.webp';
-const theatreImg = new Image(); theatreImg.src = 'game-assets/theatre-v2.webp';
+const theatreImg = new Image(); theatreImg.src = 'game-assets/theatre-stale-v2.webp';
 const carouselImg = new Image(); carouselImg.src = 'game-assets/carousel-v2.webp';
+const rinkImg = new Image(); rinkImg.src = 'game-assets/rink-v2.webp';
+const bowlImg = new Image(); bowlImg.src = 'game-assets/bowl-v2.webp';
+const highImg = new Image(); highImg.src = 'game-assets/highschool-v2.webp';
 const felisSheetImg = new Image(); felisSheetImg.src = 'game-assets/felis-idle-sheet.webp';
 const fallHimImg = new Image(); fallHimImg.src = 'game-assets/fall-him.png';
 const fallHerImg = new Image(); fallHerImg.src = 'game-assets/fall-her.png';
@@ -464,7 +467,7 @@ const felis = { x: 700, dir: -1 };
 let lastCamX = 0;
 let char = 'him';
 let scene = 'street';
-let enteredFrom = null; // which street door we used
+let enteredFrom = null; // which scene we came from (for nested exits)
 const SPEED = 300, ACCEL = 1500;
 const keys = {};
 let touchLeft = false, touchRight = false;
@@ -554,13 +557,21 @@ function bgAspect(img) {
 function worldW() {
   return Math.max(W, H * bgAspect(SCENE_IMG[scene]));
 }
-const DOORS = { arcade: [0.60, 0.70], mall: [0.80, 0.90], riverside: [0.03, 0.10] };
+const DOORS = { mall: [0.84, 0.92], riverside: [0.03, 0.10] };
+const MALL_DOORS = { arcade: [0.30, 0.42] };
 const doorPrompt = document.getElementById('doorPrompt');
 let promptAction = null; // 'enter' | 'exit' | 'ring' | 'take' | 'build'
 function doorAt() {
   const w = worldW(), zx = player.x / w;
   for (const k of Object.keys(DOORS)) {
     if (zx >= DOORS[k][0] && zx <= DOORS[k][1]) return k;
+  }
+  return null;
+}
+function mallDoorAt() {
+  const w = worldW(), zx = player.x / w;
+  for (const k of Object.keys(MALL_DOORS)) {
+    if (zx >= MALL_DOORS[k][0] && zx <= MALL_DOORS[k][1]) return k;
   }
   return null;
 }
@@ -724,37 +735,38 @@ function drawTransition() {
 function nearCarousel() {
   return scene === 'riverside' && Math.abs(player.x - worldW() * 0.55) < 130;
 }
+function enterScene(target, from) {
+  AudioSys.sfx('whoosh');
+  startTransition('iris', 0.8, () => {
+    enteredFrom = from; scene = target; player.x = worldW() * 0.5; player.animT = 0;
+    felis.x = player.x - 150; felis.dir = 1;
+    AudioSys.startMusic(target);
+    if (target === 'arcade') squirmyTip('arcade', 'Slant! The arcade lives INSIDE the mall in BROKENSPORT. Mullet Kart grudge matches go down in this joint. Check the Events app!');
+    if (target === 'mall') squirmyTip('mall', 'BROKENSPORT Mall — Shears, JCPenny, and a fountain that gave up in \u201998.');
+    if (target === 'riverside') squirmyTip('riverside', 'Brokenriver Park! The old Brass Ring Carousel — grab the brass ring, win a free ride! 🎠');
+  });
+}
 function tryEnter() {
   if (TRANS.active) return;
   if (scene === 'street') {
     const d = doorAt();
-    if (d) {
-      AudioSys.sfx('whoosh');
-      startTransition('iris', 0.8, () => {
-        enteredFrom = d; scene = d; player.x = worldW() * 0.5; player.animT = 0;
-        felis.x = player.x - 150; felis.dir = 1;
-        AudioSys.startMusic(d);
-        if (d === 'arcade') squirmyTip('arcade', 'The arcade! Mullet Kart grudge matches go down here. Check the Events app on your phone!');
-        if (d === 'mall') squirmyTip('mall', 'BROKENSPORT Mall — Shears, JCPenny, and a fountain that gave up in \u201998.');
-        if (d === 'riverside') squirmyTip('riverside', 'Riverside Park! The old Dentzel carousel — grab the brass ring, win a free ride! 🎠');
-      });
-      return;
-    }
+    if (d) { enterScene(d, 'street'); return; }
     if (canBuild()) { buildStage(); return; }
     return;
   }
+  if (scene === 'mall' && mallDoorAt() === 'arcade') { enterScene('arcade', 'mall'); return; }
   const pk = partAt();
   if (pk) { takePart(pk); return; }
   if (scene === 'riverside' && nearCarousel()) { openRingGame(); return; }
 }
 function tryExit() {
-  if (scene === 'street' || !enteredFrom || TRANS.active) return;
-  const d = enteredFrom;
+  if (scene === 'street' || TRANS.active) return;
+  const back = enteredFrom || 'street';
   AudioSys.sfx('whoosh');
   startTransition('iris', 0.8, () => {
-    scene = 'street'; enteredFrom = null;
-    AudioSys.startMusic('street');
-    player.x = worldW() * ((DOORS[d][0] + DOORS[d][1]) / 2); player.animT = 0;
+    scene = back; enteredFrom = null;
+    AudioSys.startMusic(back);
+    player.x = worldW() * 0.5; player.animT = 0;
     felis.x = player.x - 150; felis.dir = 1;
   });
 }
@@ -804,23 +816,28 @@ function felisHit(cx, cy) {
 const TOUR_LINES = {
   move: "Yo! I\u2019m Felis \u2014 welcome to BROKENSPORT! This place is da bomb diggity! Let\u2019s see if you can still get jiggy after that hella landing... \u25C0 \u25B6",
   name: "As IF! I get that a lot! Nah \u2014 I\u2019m Felis. Latin for \u2018cat,\u2019 I got the OG roots. Fool bit my style and blew straight up!",
-  arcade: "Okay, player! Head into the arcade \u2014 walk to the door, tap \u25B2. Booyah!",
+  mall: "",
+  arcade: "",
   phone: "Got a celly? \u2014 open your phone! \uD83D\uDCF1 Fo' real, ch-ch-ch-check it out!",
   weed: "Let\u2019s kick it! WEEDSWEEPER \u2014 tap the app, tap a tile. No weeds. You got this, no doubt!",
   stand: "Done in here! Back outside, homie \u2014 there\u2019s a spot I gotta show you. Peace out, arcade!",
   finale: "Home base, baby! Remember this spot. Now get out there and find each other. Word up! \uD83C\uDF2A\uFE0F",
 };
 const STAND_X = 620; // the stand site, on the street
-const THEATRE_X = 1100; // the old State Theatre (transparent chibi)
-const DRIVEIN_X = 2360; // Brokenline Drive-In sign
-const POSTER_X = 1450; // Taste of Broken County poster
+const THEATRE_X = 1010; // the old Stale Theatre (transparent chibi)
+const DRIVEIN_X = 2430; // Brokenline Drive-In sign
+const POSTER_X = 1360; // Taste of Broken County poster
+const RINK_X = 1550; // Logjam Roller Rink (transparent chibi)
+const BOWL_X = 1790; // Meyers Sport Bowl (transparent chibi)
+const HIGH_X = 2060; // Brokensport High (transparent chibi)
 let tour = null, tourStartX = 0, tourWeedPlayed = false;
 const tourBanner = document.getElementById('tourBanner');
 const tourObj = document.getElementById('tourObj');
 const tourCount = document.getElementById('tourCount');
 const TOUR_STEPS = [
   { id: 'move',   obj: '🚶 Walk left or right', check: () => Math.abs(player.x - tourStartX) > 160 },
-  { id: 'arcade', obj: '🕹️ Enter the arcade ▲', check: () => scene === 'arcade' },
+  { id: 'mall',   obj: '🏬 Enter BROKENSPORT Mall ▲', check: () => scene === 'mall' },
+  { id: 'arcade', obj: '🕹️ Find Slant — the arcade inside the mall ▲', check: () => scene === 'arcade' },
   { id: 'phone',  obj: '📱 Open your phone', check: () => overlay.classList.contains('open') },
   { id: 'weed',   obj: '🌿 Play WEEDSWEEPER — clear a tile', check: () => tourWeedPlayed },
   { id: 'stand',  obj: '🌭 Back to the street — visit the stand site', check: () => scene === 'street' && Math.abs(player.x - STAND_X) < 130 },
@@ -831,7 +848,7 @@ function tourSay(text) {
   squirmyEl.classList.add('show');
 }
 function startTour() {
-  if (tour || !['move','name','arcade','phone','weed','stand','finale'].every(k => TOUR_LINES[k])) return;
+  if (tour || !['move','name','mall','arcade','phone','weed','stand','finale'].every(k => TOUR_LINES[k])) return;
   try { if (localStorage.getItem('heysup_tour') === '1') return; } catch (e) {}
   tourStartX = player.x;
   tour = { step: 0 };
@@ -912,27 +929,32 @@ function tourDone() {
 }
 const PART_INFO = {
   planks: { label: 'planks', scene: 'riverside', fx: 0.80 },
-  tarp:   { label: 'a tarp', scene: 'mall', fx: 0.30 },
-  paint:  { label: 'paint', scene: 'arcade', fx: 0.70 },
+  tarp:   { label: 'a tarp', scene: 'mall', fx: 0.75 },
+  paint:  { label: 'paint', scene: 'street', ax: HIGH_X },
 };
 const STAGE_PART = ['planks', 'tarp', 'paint']; // what stage 0/1/2 needs next
 const BUILD_TOAST = ['frame raised!', 'walls and roof up!', 'sign\u2019s painted!'];
 const QUEST_TEXT = [
-  '🔨 The stand is sticks and dreams. Find planks at Riverside Park',
+  '🔨 The stand is sticks and dreams. Find planks at Brokenriver Park',
   '🔨 Bring the planks back to the stand site',
   '🔨 Frame\u2019s up! Find a tarp at the mall',
   '🔨 Bring the tarp back to the stand site',
-  '🔨 Looking cozy. Find paint at the arcade',
+  '🔨 Looking cozy. Find paint at Brokensport High',
   '🔨 Bring the paint back to the stand site',
 ];
 function questActive() { return !tour && tourDone() && standStage < 3; }
 function neededPart() { return questActive() && !standPart ? STAGE_PART[standStage] : null; }
+function partPx(key) {
+  const p = PART_INFO[key];
+  const ax = (p.ax != null) ? p.ax : worldW() * p.fx;
+  return Math.min(ax, worldW() - 100); // keep reachable in landscape too
+}
 function partAt() {
   const key = neededPart();
   if (!key) return null;
   const p = PART_INFO[key];
   if (scene !== p.scene) return null;
-  return Math.abs(player.x - worldW() * p.fx) < 110 ? key : null;
+  return Math.abs(player.x - partPx(key)) < 110 ? key : null;
 }
 function nearStandSite() { return scene === 'street' && Math.abs(player.x - STAND_X) < 150; }
 function canBuild() { return questActive() && standPart === STAGE_PART[standStage] && nearStandSite(); }
@@ -2045,7 +2067,7 @@ weedFlagBtn.addEventListener('click', () => {
 });
 weedNew();
 
-// ---- brass-ring carousel game (Riverside Park) ----
+// ---- brass-ring carousel game (Brokenriver Park) ----
 const ringGame = document.getElementById('ringGame');
 const ringCard = document.getElementById('ringCard');
 const ringRing = document.getElementById('ringRing');
@@ -2232,15 +2254,33 @@ function drawPlayScene(dt) {
     const pk = neededPart();
     if (pk) {
       const p = PART_INFO[pk];
-      if (scene === p.scene) drawPartProp(pk, worldW() * p.fx - camX, H * 0.84);
+      if (scene === p.scene) drawPartProp(pk, partPx(pk) - camX, H * 0.84);
     }
   }
 
-  // the old State Theatre — chibi recreation with transparency, drawn big
+  // the old Stale Theatre — chibi recreation with transparency, drawn big
   if (scene === 'street' && theatreImg.naturalWidth) {
     const th = 380, tw = th * (theatreImg.naturalWidth / theatreImg.naturalHeight);
     const gy = H * 0.84;
     ctx.drawImage(theatreImg, THEATRE_X - camX - tw / 2, gy - th, tw, th);
+  }
+
+  // Logjam Roller Rink — chibi recreation with transparency
+  if (scene === 'street' && rinkImg.naturalWidth) {
+    const rw = 240, rh = rw * (rinkImg.naturalHeight / rinkImg.naturalWidth);
+    ctx.drawImage(rinkImg, RINK_X - camX - rw / 2, H * 0.84 - rh, rw, rh);
+  }
+
+  // Meyers Sport Bowl — chibi recreation with transparency
+  if (scene === 'street' && bowlImg.naturalWidth) {
+    const bw = 240, bh = bw * (bowlImg.naturalHeight / bowlImg.naturalWidth);
+    ctx.drawImage(bowlImg, BOWL_X - camX - bw / 2, H * 0.84 - bh, bw, bh);
+  }
+
+  // Brokensport High, home of the Berries — chibi recreation with transparency
+  if (scene === 'street' && highImg.naturalWidth) {
+    const hw = 300, hh = hw * (highImg.naturalHeight / highImg.naturalWidth);
+    ctx.drawImage(highImg, HIGH_X - camX - hw / 2, H * 0.84 - hh, hw, hh);
   }
 
   // Brokenline Drive-In sign
@@ -2281,10 +2321,23 @@ function drawPlayScene(dt) {
     ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 3; ctx.strokeRect(W / 2 - 170, 26, 340, 52);
     ctx.fillStyle = '#ffd23f'; ctx.font = 'bold 24px system-ui';
     ctx.fillText('BROKENSPORT MALL', W / 2, 60);
-    anchorSign(w * 0.22 - camX, 'SHEARS', true);
-    anchorSign(w * 0.78 - camX, 'JCPENNY', false);
+    anchorSign(w * 0.12 - camX, 'SHEARS', true);
+    anchorSign(w * 0.88 - camX, 'JCPENNY', false);
+    // Slant — the arcade, inside the mall (parody of the old Tilt arcades)
+    {
+      const ex = w * 0.35 - camX, gy2 = gy;
+      const gl = 0.6 + 0.4 * Math.sin(bgT * 5);
+      ctx.fillStyle = 'rgba(255,95,208,' + (0.22 * gl).toFixed(3) + ')';
+      ctx.fillRect(ex - 70, gy2 - 220, 140, 220);
+      ctx.fillStyle = '#14101e'; ctx.fillRect(ex - 55, gy2 - 200, 110, 200);
+      ctx.strokeStyle = '#ff5fd0'; ctx.lineWidth = 4; ctx.strokeRect(ex - 55, gy2 - 200, 110, 200);
+      ctx.fillStyle = '#ff5fd0'; ctx.font = 'bold 26px system-ui';
+      ctx.fillText('SLANT', ex, gy2 - 234);
+      ctx.fillStyle = '#8e7cc3'; ctx.font = 'bold 12px system-ui';
+      ctx.fillText('arcade', ex, gy2 + 20);
+    }
     // the dry fountain
-    const fx = w * 0.62 - camX;
+    const fx = w * 0.58 - camX;
     ctx.fillStyle = '#9aa3b2'; ctx.beginPath(); ctx.ellipse(fx, gy - 20, 90, 26, 0, 0, 6.283); ctx.fill();
     ctx.fillStyle = '#7c8494'; ctx.beginPath(); ctx.ellipse(fx, gy - 26, 70, 18, 0, 0, 6.283); ctx.fill();
     ctx.fillStyle = '#9aa3b2'; ctx.fillRect(fx - 10, gy - 110, 20, 90);
@@ -2294,25 +2347,50 @@ function drawPlayScene(dt) {
     ctx.fillText('OUT OF ORDER SINCE 1998', fx, gy - 44);
   }
 
-  // Riverside Park: the Dentzel carousel — chibi recreation with transparency, drawn big
+  // Brokenriver Park: the Brass Ring Carousel — chibi recreation with transparency, drawn big
   if (scene === 'riverside' && carouselImg.naturalWidth) {
     const ch = 460, cw = ch * (carouselImg.naturalWidth / carouselImg.naturalHeight);
     const gy = H * 0.84;
     ctx.drawImage(carouselImg, w * 0.55 - camX - cw / 2, gy - ch, cw, ch);
     ctx.fillStyle = 'rgba(0,0,0,.30)'; ctx.font = 'bold 13px system-ui'; ctx.textAlign = 'center';
-    ctx.fillText('🎠 the Dentzel carousel', w * 0.55 - camX, gy + 18);
+    ctx.fillText('🎠 the Brass Ring Carousel', w * 0.55 - camX, gy + 18);
+    // the Very Berry Patch
+    const bx = w * 0.20 - camX;
+    for (const [ox, s] of [[-40, 1], [0, 1.2], [45, 0.9]]) {
+      ctx.fillStyle = '#2f7a4e';
+      ctx.beginPath(); ctx.ellipse(bx + ox, gy - 40 * s, 34 * s, 30 * s, 0, 0, 6.283); ctx.fill();
+      ctx.fillStyle = '#c0392b';
+      for (let i = 0; i < 6; i++) {
+        const a = i * 1.1 + ox;
+        ctx.beginPath(); ctx.arc(bx + ox + Math.cos(a) * 20 * s, gy - 40 * s + Math.sin(a) * 16 * s, 4, 0, 6.283); ctx.fill();
+      }
+    }
+    ctx.fillStyle = '#4a3220'; ctx.fillRect(bx - 4, gy - 122, 8, 62);
+    ctx.fillStyle = '#fdf6ec'; ctx.fillRect(bx - 72, gy - 164, 144, 46);
+    ctx.strokeStyle = '#2f7a4e'; ctx.lineWidth = 3; ctx.strokeRect(bx - 72, gy - 164, 144, 46);
+    ctx.fillStyle = '#2f7a4e'; ctx.font = 'bold 12px system-ui';
+    ctx.fillText('THE VERY', bx, gy - 145);
+    ctx.fillText('BERRY PATCH', bx, gy - 131);
   }
 
   // door / interact prompt
   promptAction = null;
   if (scene === 'street') {
     const d = doorAt();
-    if (d === 'arcade') { doorPrompt.textContent = '▲ enter the arcade'; promptAction = 'enter'; }
-    else if (d === 'mall') { doorPrompt.textContent = '▲ BROKENSPORT Mall'; promptAction = 'enter'; }
-    else if (d === 'riverside') { doorPrompt.textContent = '▲ Riverside Park'; promptAction = 'enter'; }
+    if (d === 'mall') { doorPrompt.textContent = '▲ BROKENSPORT Mall'; promptAction = 'enter'; }
+    else if (d === 'riverside') { doorPrompt.textContent = '▲ Brokenriver Park'; promptAction = 'enter'; }
     else if (canBuild()) { doorPrompt.textContent = '🔨 build the stand'; promptAction = 'build'; }
     if (promptAction) doorPrompt.classList.add('show');
     else doorPrompt.classList.remove('show');
+  } else if (scene === 'mall') {
+    const md = mallDoorAt();
+    const pk = partAt();
+    if (md === 'arcade') { doorPrompt.textContent = '▲ Slant (arcade)'; promptAction = 'enter'; }
+    else if (pk) { doorPrompt.textContent = '✋ take the ' + PART_INFO[pk].label; promptAction = 'take'; }
+    else { doorPrompt.textContent = '▼ back to the street'; promptAction = 'exit'; }
+    doorPrompt.classList.add('show');
+  } else if (scene === 'arcade') {
+    doorPrompt.textContent = '▼ back to the mall'; doorPrompt.classList.add('show'); promptAction = 'exit';
   } else {
     const pk = partAt();
     if (pk) { doorPrompt.textContent = '✋ take the ' + PART_INFO[pk].label; doorPrompt.classList.add('show'); promptAction = 'take'; }
