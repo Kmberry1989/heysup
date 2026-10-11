@@ -919,7 +919,7 @@ function tourSay(text) {
   squirmyEl.classList.add('show');
 }
 function startTour() {
-  if (tour || !['move','name','mall','arcade','phone','weed','stand','finale'].every(k => TOUR_LINES[k])) return;
+  if (tour || !TOUR_LINES.move || !TOUR_LINES.name) return; // the meeting conversation is required; later beats can be picked later
   try { if (localStorage.getItem('heysup_tour') === '1') return; } catch (e) {}
   tourStartX = player.x;
   tour = { step: 0 };
@@ -927,6 +927,9 @@ function startTour() {
   tourStep();
 }
 function tourStep() {
+  // skip beats the player hasn't written dialogue for yet
+  while (tour.step < TOUR_STEPS.length && !TOUR_LINES[TOUR_STEPS[tour.step].id]) tour.step++;
+  if (tour.step >= TOUR_STEPS.length) { finishTour(); return; }
   const s = TOUR_STEPS[tour.step];
   tourObj.textContent = s.obj;
   tourCount.textContent = (tour.step + 1) + '/' + TOUR_STEPS.length;
@@ -2422,7 +2425,9 @@ function frame(now) {
 
   const left = keys['ArrowLeft'] || keys['a'] || keys['A'] || touchLeft || (mouseDown && mouseDir === 'left');
   const right = keys['ArrowRight'] || keys['d'] || keys['D'] || touchRight || (mouseDown && mouseDir === 'right');
-  const driving = left !== right;
+  // Felis's cinematic meeting interrupts gameplay — no walking during the exchange
+  const tourCinematic = tour && tour.step === 0 && tour.seq < 2;
+  const driving = !tourCinematic && left !== right;
   if (driving) player.dir = right ? 1 : -1;
   // simple acceleration toward the target velocity
   const targetV = driving ? player.dir * SPEED : 0;
@@ -2458,7 +2463,7 @@ function frame(now) {
   drawPlayScene(dt);
 
   // guided tour: advance when the current step's condition is met
-  if (tour && TOUR_STEPS[tour.step].check()) tourAdvance();
+  if (tour && tour.step < TOUR_STEPS.length && TOUR_STEPS[tour.step].check()) tourAdvance();
   // makeshift-stand quest tracker
   if (!tour) updateQuestBanner();
 
@@ -2730,7 +2735,16 @@ function drawPlayScene(dt) {
     else { doorPrompt.textContent = '▼ back to the street'; doorPrompt.classList.add('show'); promptAction = 'exit'; }
   }
 
-  // Felis, in the world — 4-frame idle sheet, 2.4s loop
+  // player — shared animation
+  const S = SHEETS[char];
+  const groundY = H * 0.84;
+  const dw = drawAvatar(ctx, S.img, animFrame(S, player), player.x - camX, groundY, player.heightPx, player.dir);
+  ctx.fillStyle = 'rgba(0,0,0,.18)';
+  ctx.beginPath();
+  ctx.ellipse(player.x - camX, groundY + 6, dw * 0.32, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Felis, in the world — 4-frame idle sheet, 2.4s loop (drawn after the player: never buried)
   if (felisSheetImg.naturalWidth) {
     const fw = felisSheetImg.naturalWidth / 4, fh = felisSheetImg.naturalHeight;
     const fr = Math.floor(bgT / 0.6) % 4;
@@ -2753,17 +2767,9 @@ function drawPlayScene(dt) {
     squirmyEl.style.left = Math.max(8, Math.min(W - 170, fsx - 80)) + 'px';
     squirmyEl.style.bottom = (H * 0.16 + 112) + 'px';
   }
-
-  // player — shared animation
-  const S = SHEETS[char];
-  const groundY = H * 0.84;
-  const dw = drawAvatar(ctx, S.img, animFrame(S, player), player.x - camX, groundY, player.heightPx, player.dir);
-  ctx.fillStyle = 'rgba(0,0,0,.18)';
-  ctx.beginPath();
-  ctx.ellipse(player.x - camX, groundY + 6, dw * 0.32, 10, 0, 0, Math.PI * 2);
-  ctx.fill();
 }
 requestAnimationFrame(frame);
 </script>
+
 </body>
 </html>
