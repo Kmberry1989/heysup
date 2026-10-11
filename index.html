@@ -175,9 +175,14 @@
   @keyframes resumePulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.05); } }
   #muteBtn { right:14px; bottom:calc(288px + env(safe-area-inset-bottom, 0px)); background:#5c5c8a; }
   /* intro cinematic */
-  #introLayer { position:fixed; inset:0; z-index:30; display:none; opacity:0; transition:opacity .45s ease; }
+  #introLayer { position:fixed; inset:0; z-index:30; display:none; opacity:0; transition:opacity .45s ease; touch-action:none; }
   #introLayer.show { display:block; }
   #introLayer.fadein { opacity:1; }
+  #holdHint { position:fixed; bottom:calc(18px + env(safe-area-inset-bottom, 0px)); left:50%; transform:translateX(-50%);
+    z-index:32; display:none; background:rgba(10,10,20,.55); color:#fff; border-radius:999px;
+    padding:6px 14px; font-size:12px; font-weight:600; pointer-events:none; white-space:nowrap; }
+  #holdHint.show { display:block; }
+  #holdHint.fast { background:rgba(181,101,216,.85); }
   #caption { position:fixed; left:50%; bottom:calc(26px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
     z-index:31; display:none; max-width:min(560px,90vw);
     background:rgba(5,5,12,.84); color:#fff; border:2px solid #ffd23f;
@@ -189,10 +194,11 @@
   @keyframes capBloom { 0% { transform:scale(.3) translateY(8px); opacity:0; }
     60% { transform:scale(1.14) translateY(-1px); opacity:1; }
     100% { transform:scale(1) translateY(0); opacity:1; } }
-  #skipIntro { position:fixed; top:12px; right:12px; z-index:32; display:none;
-    background:rgba(10,10,20,.7); color:#fff; border:2px solid #fff;
-    border-radius:999px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer; }
-  #skipIntro.show { display:block; }
+  #holdHint { position:fixed; bottom:calc(18px + env(safe-area-inset-bottom, 0px)); left:50%; transform:translateX(-50%);
+    z-index:32; display:none; background:rgba(10,10,20,.55); color:#fff; border-radius:999px;
+    padding:6px 14px; font-size:12px; font-weight:600; pointer-events:none; white-space:nowrap; }
+  #holdHint.show { display:block; }
+  #holdHint.fast { background:rgba(181,101,216,.85); }
   #introBtn { right:14px; bottom:calc(220px + env(safe-area-inset-bottom, 0px)); background:#b565d8; }
   body.intro #hud, body.intro .hudbtn, body.intro #dpad,
   body.intro #doorPrompt, body.intro #squirmy, body.intro #tourBanner { display:none !important; }
@@ -328,7 +334,7 @@
 <button id="muteBtn" class="hudbtn" aria-label="Mute">🔊</button>
 <div id="introLayer"></div>
 <div id="caption"></div>
-<button id="skipIntro">Skip ››</button>
+<div id="holdHint">hold to speed up »</div>
 <div id="splash">
   <div class="sshow" id="sshow"></div>
   <div class="shade"></div>
@@ -1204,7 +1210,9 @@ splash.addEventListener('click', () => {
 // ---- intro cinematic ----
 const introLayer = document.getElementById('introLayer');
 const captionEl = document.getElementById('caption');
-const skipBtn = document.getElementById('skipIntro');
+const holdHint = document.getElementById('holdHint');
+// cinematics can't be skipped — press-and-hold speeds them up a little instead
+const INTRO_HOLD_MS = 220, INTRO_SPEEDUP = 2.2;
 const standImg = new Image(); standImg.src = 'game-assets/stand.webp';
 let mode = 'menu';
 const WX = 0.63, WY = 0.46; // serving-window center, fraction of screen
@@ -1302,17 +1310,20 @@ function showCaption(html) {
   capQueue = { tokens, i: 0 };
   capTimer = setInterval(() => {
     if (paused) return;
-    if (!capQueue || capQueue.i >= tokens.length) {
-      if (capTimer) { clearInterval(capTimer); capTimer = null; }
-      capQueue = null; return;
+    const steps = (mode === 'intro' && INTRO.holding) ? 2 : 1; // text keeps pace while holding
+    for (let s = 0; s < steps; s++) {
+      if (!capQueue || capQueue.i >= tokens.length) {
+        if (capTimer) { clearInterval(capTimer); capTimer = null; }
+        capQueue = null; return;
+      }
+      const t = tokens[capQueue.i++];
+      const sp = document.createElement('span');
+      sp.className = 'capword' + (t.cls ? ' ' + t.cls : '');
+      sp.textContent = t.w;
+      captionEl.appendChild(sp);
+      captionEl.appendChild(document.createTextNode(' '));
+      AudioSys.mumble(tone, capQueue.i / tokens.length);
     }
-    const t = tokens[capQueue.i++];
-    const sp = document.createElement('span');
-    sp.className = 'capword' + (t.cls ? ' ' + t.cls : '');
-    sp.textContent = t.w;
-    captionEl.appendChild(sp);
-    captionEl.appendChild(document.createTextNode(' '));
-    AudioSys.mumble(tone, capQueue.i / tokens.length);
   }, tone.rate);
 }
 function finishCaptionNow() {
@@ -1334,10 +1345,11 @@ function clearCaption() {
   capQueue = null;
   captionEl.innerHTML = '';
 }
-function startIntro(opts) {
+function startIntro() {
   INTRO.beat = 0; INTRO.t = 0; INTRO.portalR = 0; INTRO.flash = 0;
   INTRO.spin = 0; INTRO.suckT = 0; INTRO.kyleT = 0;
   INTRO.thudPlayed = false; INTRO.landDust = false; INTRO.dust = [];
+  INTRO.holding = false; INTRO.holdTimer = null;
   BEATS = buildBeats();
   INTRO.vSheet = (char === 'him') ? SHEETS.her : SHEETS.him;
   INTRO.hSheet = SHEETS[char];
@@ -1354,7 +1366,9 @@ function startIntro(opts) {
   document.body.classList.add('intro');
   introLayer.classList.add('show');
   requestAnimationFrame(() => requestAnimationFrame(() => introLayer.classList.add('fadein')));
-  if (!opts || !opts.noSkip) skipBtn.classList.add('show');
+  holdHint.textContent = 'hold to speed up »';
+  holdHint.classList.remove('fast');
+  holdHint.classList.add('show');
   showCaption(BEATS[0].cap);
 }
 function enterGame() {
@@ -1364,7 +1378,7 @@ function enterGame() {
   document.body.classList.remove('menu', 'intro');
   introLayer.classList.remove('show');
   captionEl.classList.remove('show');
-  skipBtn.classList.remove('show');
+  holdHint.classList.remove('show', 'fast');
   mode = 'play';
   AudioSys.startMusic('street');
 }
@@ -1518,6 +1532,7 @@ function drawLandingGetup(dt) {
   }
 }
 function drawIntro(dt) {
+  if (INTRO.holding) dt *= INTRO_SPEEDUP; // hold to go a little faster — never skippable
   INTRO.t += dt;
   INTRO.spin += dt * 4;
   const b = INTRO.beat, bt = INTRO.t;
@@ -1701,12 +1716,28 @@ function drawIntro(dt) {
     ctx.fillRect(0, 0, W, H);
   }
 }
-introLayer.addEventListener('click', () => {
+introLayer.addEventListener('pointerdown', e => {
   if (mode !== 'intro') return;
-  if (finishCaptionNow()) return;
-  nextBeat();
+  e.preventDefault();
+  INTRO.holdTimer = setTimeout(() => {
+    INTRO.holding = true; INTRO.holdTimer = null;
+    holdHint.textContent = 'speeding up »»';
+    holdHint.classList.add('fast');
+  }, INTRO_HOLD_MS);
 });
-skipBtn.addEventListener('click', e => { e.stopPropagation(); finishIntro(); });
+function endIntroHold(fromTap) {
+  if (INTRO.holdTimer) { clearTimeout(INTRO.holdTimer); INTRO.holdTimer = null; }
+  if (INTRO.holding) {
+    INTRO.holding = false;
+    holdHint.classList.remove('fast');
+    holdHint.textContent = 'hold to speed up »';
+  } else if (fromTap && mode === 'intro') {
+    finishCaptionNow(); // a quick tap only completes the text — beats can't be skipped
+  }
+}
+introLayer.addEventListener('pointerup', () => endIntroHold(true));
+introLayer.addEventListener('pointercancel', () => endIntroHold(false));
+introLayer.addEventListener('pointerleave', () => endIntroHold(false));
 document.getElementById('introBtn').addEventListener('click', () => { AudioSys.sfx('click'); startIntro(); });
 
 // ---- main menu ----
@@ -1778,7 +1809,7 @@ function selectChar(c) {
   setTimeout(() => {
     menuEl.classList.add('hidden');
     document.body.classList.remove('menu');
-    startIntro({ noSkip: true });
+    startIntro();
   }, 2100);
 }
 document.getElementById('selHim').addEventListener('click', () => selectChar('him'));
