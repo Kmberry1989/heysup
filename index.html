@@ -19,36 +19,19 @@
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     touch-action:none; -webkit-user-select:none; user-select:none; }
   #game { position:fixed; inset:0; display:block; }
-  #hud { position:fixed; top:10px; left:12px; color:#fff; z-index:5;
-    text-shadow:0 2px 0 #000,-1px 0 0 #000,1px 0 0 #000,0 -1px 0 #000; }
-  #hud .title { font-weight:800; font-size:18px; letter-spacing:.5px; }
-  #hud .hint { font-size:12px; opacity:.85; margin-top:2px; }
   .hudbtn { position:fixed; z-index:5; width:56px; height:56px; border-radius:50%;
     border:3px solid #fff; font-size:26px; display:flex; align-items:center;
     justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); }
   .hudbtn:active { transform:scale(.93); }
-  #phoneBtn { right:14px; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); background:#7c5cff; }
-  #swapBtn { right:14px; bottom:calc(84px + env(safe-area-inset-bottom, 0px)); background:#ff9f1c; }
+  #phoneBtn { right:calc(14px + env(safe-area-inset-right, 0px)); bottom:calc(16px + env(safe-area-inset-bottom, 0px)); background:#7c5cff; }
+  #swapBtn { right:calc(14px + env(safe-area-inset-right, 0px)); bottom:calc(84px + env(safe-area-inset-bottom, 0px)); background:#ff9f1c; display:none; }
+  /* shown only after the guided tour — no swapping during the story opening */
   #doorPrompt { position:fixed; left:50%; bottom:calc(90px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
     z-index:5; display:none; background:rgba(10,10,20,.82); color:#fff;
     border:2px solid #ffd23f; border-radius:999px; padding:10px 22px;
     font-size:15px; font-weight:700; cursor:pointer; white-space:nowrap; }
   #doorPrompt.show { display:block; }
-  /* onscreen touch controller (touch devices only) */
-  #dpad { position:fixed; left:12px; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:7; display:none;
-    grid-template-columns:repeat(3,54px); grid-template-rows:repeat(3,54px); gap:4px; }
-  body.touch #dpad { display:grid; }
-  body.touch #dpad.hidden { display:none; }
-  #dpad button { border-radius:50%; border:2px solid rgba(255,255,255,.7);
-    background:rgba(10,10,20,.45); color:#fff; font-size:22px; touch-action:none; }
-  #dpad button.pressed { background:rgba(124,92,255,.8); }
-  #dpad .up { grid-column:2; grid-row:1; }
-  #dpad .left { grid-column:1; grid-row:2; }
-  #dpad .down { grid-column:2; grid-row:3; }
-  #dpad .right { grid-column:3; grid-row:2; }
   body.touch #squirmy { bottom:calc(196px + env(safe-area-inset-bottom, 0px)); }
-  #dpadToggle { right:14px; bottom:calc(152px + env(safe-area-inset-bottom, 0px)); background:#2ec4b6; display:none; }
-  body.touch #dpadToggle { display:flex; }
   /* squirmy helper */
   #squirmy { position:fixed; left:12px; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:6; display:none;
     align-items:flex-end; gap:8px; cursor:pointer; max-width:78vw; }
@@ -119,7 +102,7 @@
     25% { box-shadow:0 0 26px rgba(95,217,122,.9); transform:scale(1.06); }
     60% { box-shadow:0 0 18px rgba(95,217,122,.7); transform:scale(1.03); }
     100% { box-shadow:0 0 30px rgba(95,217,122,1); transform:scale(1.05); } }
-  body.menu #hud, body.menu .hudbtn, body.menu #dpad, body.menu #squirmy, body.menu #tourBanner { display:none !important; }
+  body.menu .hudbtn, body.menu #squirmy, body.menu #tourBanner { display:none !important; }
   /* splash */
   #splash { position:fixed; inset:0; z-index:60; background:#0b0b12; cursor:pointer;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
@@ -200,7 +183,7 @@
   #holdHint.show { display:block; }
   #holdHint.fast { background:rgba(181,101,216,.85); }
   #introBtn { right:14px; bottom:calc(220px + env(safe-area-inset-bottom, 0px)); background:#b565d8; }
-  body.intro #hud, body.intro .hudbtn, body.intro #dpad,
+  body.intro .hudbtn,
   body.intro #doorPrompt, body.intro #squirmy, body.intro #tourBanner { display:none !important; }
   /* phone */
   #phoneOverlay { position:fixed; inset:0; z-index:10; display:none;
@@ -214,11 +197,11 @@
   .pscreen { position:absolute; inset:0; padding:44px 14px 14px; display:none;
     flex-direction:column; background:linear-gradient(#fdf6ec,#f3e4f7); }
   .pscreen.open { display:flex; }
-  .appgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:8px; }
-  .app { background:#fff; border-radius:16px; padding:10px 4px; text-align:center;
-    font-size:11px; font-weight:600; color:#333; cursor:pointer;
+  .appgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:6px; }
+  .app { background:#fff; border-radius:12px; padding:7px 2px; text-align:center;
+    font-size:9px; font-weight:600; color:#333; cursor:pointer;
     box-shadow:0 2px 6px rgba(0,0,0,.12); }
-  .app .ico { font-size:28px; display:block; margin-bottom:4px; }
+  .app .ico { font-size:20px; display:block; margin-bottom:2px; }
   .app:active { transform:scale(.94); }
   .phead { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
   .phead .back { font-size:20px; cursor:pointer; background:#fff; border-radius:50%;
@@ -236,18 +219,6 @@
   #feedBtn { background:#ff6b6b; } #playBtn { background:#4ecdc4; }
   .petbtns button:active { transform:scale(.94); }
   #bamImg { width:100%; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.15); }
-  /* weedsweeper */
-  #weedStatus { text-align:center; font-weight:800; font-size:14px; margin:2px 0 8px; color:#2d6a4f; min-height:20px; }
-  #weedGrid { display:grid; grid-template-columns:repeat(8,1fr); gap:3px; align-self:center; }
-  .wcell { width:32px; height:32px; background:#b7e4a8; border-radius:6px;
-    display:flex; align-items:center; justify-content:center; font-size:16px;
-    font-weight:800; color:#2d6a4f; cursor:pointer; }
-  .wcell.open { background:#f4f1de; cursor:default; }
-  .wcell.weed { background:#ffd6d6; }
-  .weedbtns { display:flex; gap:8px; justify-content:center; margin-top:10px; }
-  .weedbtns button { font-size:13px; font-weight:700; border:none; border-radius:999px;
-    padding:8px 14px; cursor:pointer; background:#2d6a4f; color:#fff; }
-  .weedbtns button.active { background:#d68c45; }
   /* brass-ring carousel game */
   #ringGame { position:fixed; inset:0; z-index:10; display:none;
     align-items:center; justify-content:center; background:rgba(5,5,12,.78); }
@@ -314,20 +285,9 @@
 </head>
 <body class="menu">
 <canvas id="game"></canvas>
-<div id="hud">
-  <div class="title">hey, sup?</div>
-  <div class="hint">prototype v5 &middot; &larr;&rarr;/AD walk &middot; &uarr; enter &middot; tap phone</div>
-</div>
 <div id="tourBanner"><span id="tourObj"></span><span id="tourCount"></span></div>
 <button id="swapBtn" class="hudbtn" aria-label="Swap character">🔄</button>
 <button id="phoneBtn" class="hudbtn" aria-label="Open phone">📱</button>
-<button id="dpadToggle" class="hudbtn" aria-label="Toggle touch controller">🎮</button>
-<div id="dpad">
-  <button class="up" data-k="ArrowUp" aria-label="Up">▲</button>
-  <button class="left" data-k="ArrowLeft" aria-label="Left">◀</button>
-  <button class="down" data-k="ArrowDown" aria-label="Down">▼</button>
-  <button class="right" data-k="ArrowRight" aria-label="Right">▶</button>
-</div>
 <div id="doorPrompt"></div>
 <div id="squirmy"><div class="felisface" role="img" aria-label="Felis"></div><div class="berrytag">🐾 BERRIES</div><div id="sqBubble"></div></div>
 <button id="introBtn" class="hudbtn" aria-label="Replay intro">🎬</button>
@@ -379,15 +339,6 @@
     <div id="pBam" class="pscreen">
       <div class="phead"><div class="back" data-back>‹</div><div class="ptitle">BAM</div></div>
       <img id="bamImg" src="game-assets/bam.webp" alt="BAM conversation">
-    </div>
-    <div id="pWeed" class="pscreen">
-      <div class="phead"><div class="back" data-back>‹</div><div class="ptitle">WEEDSWEEPER</div></div>
-      <div id="weedStatus">find the weeds, don't pick 'em 🌿</div>
-      <div id="weedGrid"></div>
-      <div class="weedbtns">
-        <button id="weedNew">🔄 New</button>
-        <button id="weedFlag">🚩 Flag: off</button>
-      </div>
     </div>
   </div>
 </div>
@@ -468,9 +419,10 @@ resize();
 const streetImg = new Image(); streetImg.src = 'game-assets/street.webp';
 const arcadeImg = new Image(); arcadeImg.src = 'game-assets/arcade.webp';
 const mallImg = new Image(); mallImg.src = 'game-assets/mall.webp';
+const mallExtImg = new Image(); mallExtImg.src = 'game-assets/mall-exterior-actual.webp'; // the actual Logansport Mall — user's sprite
 const signImg = new Image(); signImg.src = 'game-assets/sign.png';
 const grassImg = new Image(); grassImg.src = 'game-assets/grass-strip.webp';
-const theatreImg = new Image(); theatreImg.src = 'game-assets/theatre-stale-v4.webp';
+const theatreImg = new Image(); theatreImg.src = 'game-assets/logan-state-theatre-1984.jpg';
 const carouselImg = new Image(); carouselImg.src = 'game-assets/carousel-building.webp';
 const cGoatImg = new Image(); cGoatImg.src = 'game-assets/carousel-goat.webp';
 const cGiraffeImg = new Image(); cGiraffeImg.src = 'game-assets/carousel-giraffe.webp';
@@ -531,7 +483,6 @@ let scene = 'street';
 let enteredFrom = null; // which scene we came from (for nested exits)
 const SPEED = 300, ACCEL = 1500;
 const keys = {};
-let touchLeft = false, touchRight = false;
 
 window.addEventListener('keydown', e => {
   if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)) e.preventDefault();
@@ -548,75 +499,38 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.key] = false; });
 
-const activeTouches = new Map();
-function touchDir(t) { return t.clientX < W / 2 ? 'left' : 'right'; }
+// tap-to-run: tap anywhere in the world and the player runs there
+function setTapTarget(clientX) {
+  if (tour && tour.step === 0 && tour.seq < 2) return; // frozen during Felis's cinematic meeting
+  const w = worldW();
+  player.tapX = Math.max(60, Math.min(w - 60, clientX + lastCamX));
+}
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
   for (const t of e.changedTouches) {
     if (mode === 'play' && felisHit(t.clientX, t.clientY)) felisTaps.add(t.identifier);
-    else activeTouches.set(t.identifier, touchDir(t));
+    else if (mode === 'play') setTapTarget(t.clientX);
   }
-  updateTouch();
-}, {passive:false});
-canvas.addEventListener('touchmove', e => {
-  e.preventDefault();
-  for (const t of e.changedTouches) activeTouches.set(t.identifier, touchDir(t));
-  updateTouch();
 }, {passive:false});
 function touchEnd(e) {
   for (const t of e.changedTouches) {
     if (felisTaps.delete(t.identifier)) felisTap();
-    activeTouches.delete(t.identifier);
   }
-  updateTouch();
 }
 canvas.addEventListener('touchend', touchEnd);
 canvas.addEventListener('touchcancel', touchEnd);
-function updateTouch() {
-  touchLeft = touchRight = false;
-  for (const d of activeTouches.values()) d === 'left' ? touchLeft = true : touchRight = true;
-}
-let mouseDown = false, mouseDir = null;
 canvas.addEventListener('mousedown', e => {
   if (mode === 'play' && felisHit(e.clientX, e.clientY)) { mouseFelis = true; return; }
-  mouseDown = true; mouseDir = touchDir(e);
+  if (mode === 'play') setTapTarget(e.clientX);
 });
 window.addEventListener('mouseup', () => {
   if (mouseFelis) { mouseFelis = false; felisTap(); return; }
-  mouseDown = false; mouseDir = null;
 });
-window.addEventListener('mousemove', e => { if (mouseDown) mouseDir = touchDir(e); });
 
-// onscreen touch controller (shows on touch devices)
+// touch device flag (kept for layout tweaks)
 if (('ontouchstart' in window) || navigator.maxTouchPoints > 0) {
   document.body.classList.add('touch');
 }
-const dpad = document.getElementById('dpad');
-dpad.querySelectorAll('button').forEach(btn => {
-  const k = btn.dataset.k;
-  const press = e => {
-    e.preventDefault();
-    keys[k] = true;
-    btn.classList.add('pressed');
-    AudioSys.sfx('tick');
-    if (k === 'ArrowUp') tryEnter();
-    if (k === 'ArrowDown') tryExit();
-  };
-  const release = e => {
-    if (e) e.preventDefault();
-    keys[k] = false;
-    btn.classList.remove('pressed');
-  };
-  btn.addEventListener('touchstart', press, {passive:false});
-  btn.addEventListener('touchend', release, {passive:false});
-  btn.addEventListener('touchcancel', release, {passive:false});
-  btn.addEventListener('mousedown', press);
-  btn.addEventListener('mouseup', release);
-  btn.addEventListener('mouseleave', () => release(null));
-});
-document.getElementById('dpadToggle').addEventListener('click', () => {
-  dpad.classList.toggle('hidden');
-});
 
 // scenes + doors
 function bgAspect(img) {
@@ -648,7 +562,7 @@ let bgT = 0, frameDt = 0.016;
 const clouds = [];
 for (let i = 0; i < 5; i++) clouds.push({
   x: Math.random(), y: 0.06 + Math.random() * 0.2, s: 0.7 + Math.random() * 0.9,
-  spd: 0.004 + Math.random() * 0.008, a: 0.75 + Math.random() * 0.25
+  spd: 0.0004 + Math.random() * 0.0008, a: 0.75 + Math.random() * 0.25
 });
 const motes = [];
 for (let i = 0; i < 22; i++) motes.push({
@@ -807,7 +721,7 @@ function nearLane() {
 function enterScene(target, from) {
   AudioSys.sfx('whoosh');
   startTransition('iris', 0.8, () => {
-    enteredFrom = from; scene = target; player.x = worldW() * 0.5; player.animT = 0;
+    enteredFrom = from; scene = target; player.x = worldW() * 0.5; player.animT = 0; player.tapX = null;
     felis.x = player.x - 150; felis.dir = 1;
     AudioSys.startMusic(target);
     if (target === 'arcade') squirmyTip('arcade', 'The Okay Space! The arcade lives INSIDE the mall in BROKENSPORT. Mullet Kart grudge matches go down in this joint. Check the Events app!');
@@ -877,7 +791,7 @@ squirmyEl.addEventListener('click', felisTap);
 const felisTaps = new Set();
 let mouseFelis = false;
 function felisHit(cx, cy) {
-  const fsx = felis.x - lastCamX, fsy = H * 0.84 - 55;
+  const fsx = felis.x - lastCamX, fsy = (felis.fy || H * 0.52);
   return Math.hypot(cx - fsx, cy - fsy) < 80;
 }
 
@@ -890,18 +804,17 @@ const TOUR_LINES = {
   mall: "Sick moves! See those doors? That\u2019s BROKENSPORT Mall \u2014 walk up and tap \u25B2! It\u2019s gonna be phat!",
   arcade: "Peep the neon \u2014 that\u2019s The Okay Space! The arcade lives INSIDE the mall here. Walk up, tap \u25B2, let\u2019s get jiggy!",
   phone: "Here\u2019s the 411: open your phone! Purple button, bottom-right. All the good stuff, no joke.",
-  weed: "Booyah \u2014 game time! Open WEEDSWEEPER, tap a tile. Dodge the weeds, keep it real!",
   stand: "Aight, back to the street! The stand site\u2019s waiting. Jet with me!",
   finale: "Here\u2019s the spot! One day the chili dog stand rises again \u2014 right here. Until then, BROKENSPORT is yours. Go explore, player! \uD83C\uDF2D",
 };
 const STAND_X = 620; // the stand site, on the street
-const THEATRE_X = 1010; // the old Stale Theatre (transparent chibi)
+const THEATRE_X = 1010; // the old State Theatre — the real 1984 facade photo
 const DRIVEIN_X = 2430; // Brokenline Drive-In sign
 const POSTER_X = 1360; // Taste of Broken County poster
 const RINK_X = 1550; // Stroller Stink (transparent chibi)
 const BOWL_X = 1790; // Meyers Snort Hole (transparent chibi)
 const HIGH_X = 2060; // Brokensport High (transparent chibi)
-let tour = null, tourStartX = 0, tourWeedPlayed = false;
+let tour = null, tourStartX = 0;
 const tourBanner = document.getElementById('tourBanner');
 const tourObj = document.getElementById('tourObj');
 const tourCount = document.getElementById('tourCount');
@@ -910,7 +823,6 @@ const TOUR_STEPS = [
   { id: 'mall',   obj: '🏬 Enter BROKENSPORT Mall ▲', check: () => scene === 'mall' },
   { id: 'arcade', obj: '🕹️ Find The Okay Space — the arcade inside the mall ▲', check: () => scene === 'arcade' },
   { id: 'phone',  obj: '📱 Open your phone', check: () => overlay.classList.contains('open') },
-  { id: 'weed',   obj: '🌿 Play WEEDSWEEPER — clear a tile', check: () => tourWeedPlayed },
   { id: 'stand',  obj: '🌭 Back to the street — visit the stand site', check: () => scene === 'street' && Math.abs(player.x - STAND_X) < 130 },
 ];
 function tourSay(text) {
@@ -982,6 +894,7 @@ function finishTour() {
     toast('Now go find each other. 🌪️');
     try { localStorage.setItem('heysup_tour', '1'); } catch (e) {}
     tour = null;
+    document.getElementById('swapBtn').style.display = 'flex'; // story opening done — swapping unlocks
   }, 6000);
 }
 
@@ -1219,6 +1132,13 @@ const captionEl = document.getElementById('caption');
 const holdHint = document.getElementById('holdHint');
 // cinematics can't be skipped — press-and-hold speeds them up a little instead
 const INTRO_HOLD_MS = 220, INTRO_SPEEDUP = 2.2;
+// one hint line, contextual: hold to hurry a beat along, tap once it's done to move on
+function updateIntroHint() {
+  if (INTRO.holding) { holdHint.textContent = 'speeding up »»'; holdHint.classList.add('fast'); }
+  else if (INTRO.readyToAdvance) { holdHint.textContent = 'tap to continue »'; holdHint.classList.remove('fast'); }
+  else { holdHint.textContent = 'hold to speed up »'; holdHint.classList.remove('fast'); }
+  holdHint.classList.add('show');
+}
 const standImg = new Image(); standImg.src = 'game-assets/stand.webp';
 let mode = 'menu';
 const WX = 0.63, WY = 0.46; // serving-window center, fraction of screen
@@ -1370,7 +1290,7 @@ function startIntro() {
   INTRO.beat = 0; INTRO.t = 0; INTRO.portalR = 0; INTRO.flash = 0;
   INTRO.spin = 0; INTRO.suckT = 0; INTRO.kyleT = 0;
   INTRO.thudPlayed = false; INTRO.landDust = false; INTRO.dust = [];
-  INTRO.holding = false; INTRO.holdTimer = null;
+  INTRO.holding = false; INTRO.holdTimer = null; INTRO.readyToAdvance = false;
   BEATS = buildBeats();
   INTRO.vSheet = (char === 'him') ? SHEETS.her : SHEETS.him;
   INTRO.hSheet = SHEETS[char];
@@ -1387,9 +1307,7 @@ function startIntro() {
   document.body.classList.add('intro');
   introLayer.classList.add('show');
   requestAnimationFrame(() => requestAnimationFrame(() => introLayer.classList.add('fadein')));
-  holdHint.textContent = 'hold to speed up »';
-  holdHint.classList.remove('fast');
-  holdHint.classList.add('show');
+  updateIntroHint();
   showCaption(BEATS[0].cap);
 }
 function enterGame() {
@@ -1402,6 +1320,8 @@ function enterGame() {
   holdHint.classList.remove('show', 'fast');
   mode = 'play';
   AudioSys.startMusic('street');
+  // character swap unlocks only after the story opening (tour) is done
+  document.getElementById('swapBtn').style.display = tourDone() ? 'flex' : 'none';
 }
 function finishIntro() {
   try { localStorage.setItem('heysup_intro', '1'); } catch (e) {}
@@ -1412,6 +1332,8 @@ function finishIntro() {
 function nextBeat() {
   INTRO.beat++;
   INTRO.t = 0;
+  INTRO.readyToAdvance = false;
+  updateIntroHint();
   if (INTRO.beat >= BEATS.length) { finishIntro(); return; }
   showCaption(BEATS[INTRO.beat].cap);
   if (INTRO.beat === 2) AudioSys.sfx('lever');
@@ -1557,8 +1479,10 @@ function drawIntro(dt) {
   INTRO.t += dt;
   INTRO.spin += dt * 4;
   const b = INTRO.beat, bt = INTRO.t;
-  // beats with dialogue wait for the caption to finish blooming — no talking over the action
-  if (bt >= BEATS[b].dur && (capComplete || !BEATS[b].cap)) { nextBeat(); return; }
+  // beats with dialogue wait for the caption to finish blooming; then it's tap-to-continue — no rushing the read
+  if (bt >= BEATS[b].dur && (capComplete || !BEATS[b].cap)) {
+    if (!INTRO.readyToAdvance) { INTRO.readyToAdvance = true; updateIntroHint(); }
+  } else if (INTRO.readyToAdvance) { INTRO.readyToAdvance = false; updateIntroHint(); }
 
   // rough-landing cutscene: canvas-only, no DOM overlays
   if (b >= 9) { drawLanding(dt); return; }
@@ -1751,10 +1675,10 @@ function endIntroHold(fromTap) {
   if (INTRO.holdTimer) { clearTimeout(INTRO.holdTimer); INTRO.holdTimer = null; }
   if (INTRO.holding) {
     INTRO.holding = false;
-    holdHint.classList.remove('fast');
-    holdHint.textContent = 'hold to speed up »';
+    updateIntroHint();
   } else if (fromTap && mode === 'intro') {
-    finishCaptionNow(); // a quick tap only completes the text — beats can't be skipped
+    if (INTRO.readyToAdvance) nextBeat(); // scene's done — tap moves on
+    else finishCaptionNow(); // a quick tap only completes the text — beats can't be skipped
   }
 }
 introLayer.addEventListener('pointerup', () => endIntroHold(true));
@@ -1853,41 +1777,62 @@ document.getElementById('swapBtn').addEventListener('click', () => {
 
 // ---- procedural audio: all synthesized with Web Audio, no audio files ----
 const SONGS = {
-  menu:   { bpm: 80, root: 110, bassType: 'triangle', bassVol: 0.085, leadType: 'sine', leadVol: 0.05,
-            bass: [0,-1,-1,-1, 0,-1,-1,-1, 5,-1,-1,-1, 7,-1,5,-1],
-            lead: [12,-1,-1,-1, -1,-1,15,-1, -1,-1,-1,-1, 19,-1,15,-1],
-            kick: [], hat: [4, 12],
-            arp: [-1,-1,-1,-1, -1,-1,-1,-1, 12,16,19,24, 19,16,12,16], arpType: 'sine', arpVol: 0.04, arpOct: 4 },
-  street: { bpm: 88, root: 98, bassType: 'triangle', bassVol: 0.085, leadType: 'square', leadVol: 0.035,
-            bass: [0,-1,0,-1, 7,-1,0,-1, 5,-1,5,-1, 7,-1,3,-1],
-            lead: [-1,-1,12,-1, -1,-1,-1,-1, -1,15,-1,-1, -1,-1,17,-1],
-            kick: [0, 8], hat: [2, 6, 10, 14],
-            arp: [-1,-1,-1,-1, -1,-1,-1,-1, 12,-1,15,17, -1,19,22,19], arpType: 'triangle', arpVol: 0.035, arpOct: 2 },
-  arcade: { bpm: 112, root: 123, bassType: 'sawtooth', bassVol: 0.06, leadType: 'square', leadVol: 0.04,
-            bass: [0,0,7,0, 0,0,10,7, 0,0,7,0, 5,7,10,12],
-            lead: [12,-1,15,-1, 19,-1,15,-1, 12,-1,15,19, -1,15,-1,12],
-            kick: [0, 4, 8, 12], hat: [2, 6, 10, 14],
-            arp: [-1,-1,-1,-1, -1,-1,-1,-1, 12,15,19,24, 22,19,15,19], arpType: 'square', arpVol: 0.028, arpOct: 2 },
-  mall:   { bpm: 72, root: 87, bassType: 'sine', bassVol: 0.09, leadType: 'sine', leadVol: 0.05,
-            bass: [0,-1,-1,-1, -1,-1,5,-1, -1,-1,-1,-1, 7,-1,5,-1],
-            lead: [-1,-1,12,-1, -1,-1,-1,-1, 15,-1,-1,17, -1,-1,15,-1],
+  menu:   { bpm: 68, root: 110, bassType: 'triangle', bassVol: 0.085, leadType: 'sine', leadVol: 0.05,
+            bass: [0,-1,-1,-1, 0,-1,-1,-1, 5,-1,-1,-1, 7,-1,5,-1,
+                   0,-1,-1,-1, 0,-1,-1,-1, 3,-1,-1,-1, 5,-1,7,-1],
+            lead: [12,-1,-1,-1, -1,-1,15,-1, -1,-1,-1,-1, 19,-1,15,-1,
+                   12,-1,-1,-1, -1,-1,17,-1, -1,-1,15,-1, 19,-1,22,-1],
+            kick: [], hat: [4, 12, 20, 28],
+            arp: [-1,-1,-1,-1, -1,-1,-1,-1, 12,16,19,24, 19,16,12,16,
+                  -1,-1,-1,-1, -1,-1,-1,-1, 15,19,22,24, 22,19,16,12], arpType: 'sine', arpVol: 0.04, arpOct: 4 },
+  street: { bpm: 74, root: 98, bassType: 'triangle', bassVol: 0.085, leadType: 'square', leadVol: 0.035,
+            bass: [0,-1,0,-1, 7,-1,0,-1, 5,-1,5,-1, 7,-1,3,-1,
+                   0,-1,0,-1, 7,-1,0,-1, 3,-1,5,-1, 7,-1,10,-1],
+            lead: [-1,-1,12,-1, -1,-1,-1,-1, -1,15,-1,-1, -1,-1,17,-1,
+                   -1,-1,12,-1, -1,-1,15,-1, -1,-1,17,-1, -1,19,-1,22],
+            kick: [0, 8, 16, 24], hat: [2, 6, 10, 14, 18, 22, 26, 30],
+            arp: [-1,-1,-1,-1, -1,-1,-1,-1, 12,-1,15,17, -1,19,22,19,
+                  -1,-1,-1,-1, -1,-1,-1,-1, 15,-1,17,19, -1,22,24,22], arpType: 'triangle', arpVol: 0.035, arpOct: 2 },
+  arcade: { bpm: 96, root: 123, bassType: 'sawtooth', bassVol: 0.06, leadType: 'square', leadVol: 0.04,
+            bass: [0,0,7,0, 0,0,10,7, 0,0,7,0, 5,7,10,12,
+                   0,0,7,0, 0,0,10,7, 3,3,7,3, 5,7,10,7],
+            lead: [12,-1,15,-1, 19,-1,15,-1, 12,-1,15,19, -1,15,-1,12,
+                   12,-1,15,-1, 19,-1,22,-1, 19,-1,15,19, -1,17,-1,15],
+            kick: [0, 4, 8, 12, 16, 20, 24, 28], hat: [2, 6, 10, 14, 18, 22, 26, 30],
+            arp: [-1,-1,-1,-1, -1,-1,-1,-1, 12,15,19,24, 22,19,15,19,
+                  -1,-1,-1,-1, -1,-1,-1,-1, 15,19,22,24, 24,22,19,15], arpType: 'square', arpVol: 0.028, arpOct: 2 },
+  mall:   { bpm: 62, root: 87, bassType: 'sine', bassVol: 0.09, leadType: 'sine', leadVol: 0.05,
+            bass: [0,-1,-1,-1, -1,-1,5,-1, -1,-1,-1,-1, 7,-1,5,-1,
+                   0,-1,-1,-1, -1,-1,3,-1, -1,-1,-1,-1, 5,-1,7,-1],
+            lead: [-1,-1,12,-1, -1,-1,-1,-1, 15,-1,-1,17, -1,-1,15,-1,
+                   -1,-1,12,-1, -1,-1,15,-1, 17,-1,-1,19, -1,-1,15,-1],
             kick: [], hat: [],
-            arp: [-1,-1,-1,-1, -1,-1,-1,-1, 12,-1,16,19, -1,23,19,16], arpType: 'sine', arpVol: 0.04, arpOct: 4 },
-  splash: { bpm: 60, root: 82.4, bassType: 'sine', bassVol: 0.075, leadType: 'sine', leadVol: 0.038,
-            bass: [0,-1,-1,-1, -1,-1,-1,-1, 3,-1,-1,-1, -1,-1,-1,-1],
-            lead: [-1,-1,-1,-1, 12,-1,-1,-1, -1,-1,-1,-1, -1,-1,15,-1],
+            arp: [-1,-1,-1,-1, -1,-1,-1,-1, 12,-1,16,19, -1,23,19,16,
+                  -1,-1,-1,-1, -1,-1,-1,-1, 15,-1,19,22, -1,24,22,19], arpType: 'sine', arpVol: 0.04, arpOct: 4 },
+  splash: { bpm: 54, root: 82.4, bassType: 'sine', bassVol: 0.075, leadType: 'sine', leadVol: 0.038,
+            bass: [0,-1,-1,-1, -1,-1,-1,-1, 3,-1,-1,-1, -1,-1,-1,-1,
+                   0,-1,-1,-1, -1,-1,-1,-1, 5,-1,-1,-1, -1,-1,3,-1],
+            lead: [-1,-1,-1,-1, 12,-1,-1,-1, -1,-1,-1,-1, -1,-1,15,-1,
+                   -1,-1,-1,-1, 12,-1,-1,-1, -1,-1,17,-1, -1,-1,15,-1],
             kick: [], hat: [],
-            arp: [-1,-1,7,-1, -1,-1,12,-1, -1,10,-1,-1, 7,-1,-1,-1], arpType: 'sine', arpVol: 0.028, arpOct: 4 },
-  riverside: { bpm: 96, root: 130.8, bassType: 'sine', bassVol: 0.08, leadType: 'triangle', leadVol: 0.045,
-            bass: [0,-1,-1,-1, -1,-1,-1,-1, 5,-1,-1,-1, -1,-1,7,-1],
-            lead: [12,-1,-1,15, -1,-1,19,-1, -1,17,-1,15, -1,-1,12,-1],
-            kick: [0], hat: [4, 12],
-            arp: [12,-1,16,-1, 19,-1,16,-1, 12,-1,16,-1, 19,-1,24,-1], arpType: 'sine', arpVol: 0.03, arpOct: 4 },
-  bowl: { bpm: 100, root: 116.5, bassType: 'square', bassVol: 0.07, leadType: 'square', leadVol: 0.035,
-            bass: [0,-1,0,-1, 3,-1,5,-1, 7,-1,5,-1, 3,-1,0,-1],
-            lead: [12,-1,-1,15, -1,-1,19,-1, -1,17,-1,15, 12,-1,-1,-1],
-            kick: [0, 8], hat: [2, 6, 10, 14],
-            arp: [12,-1,15,-1, 19,-1,22,-1, 19,-1,15,-1, 12,-1,15,-1], arpType: 'triangle', arpVol: 0.03, arpOct: 2 } };
+            arp: [-1,-1,7,-1, -1,-1,12,-1, -1,10,-1,-1, 7,-1,-1,-1,
+                  -1,-1,7,-1, -1,-1,15,-1, -1,12,-1,-1, 10,-1,-1,-1], arpType: 'sine', arpVol: 0.028, arpOct: 4 },
+  riverside: { bpm: 82, root: 130.8, bassType: 'sine', bassVol: 0.08, leadType: 'triangle', leadVol: 0.045,
+            bass: [0,-1,-1,-1, -1,-1,-1,-1, 5,-1,-1,-1, -1,-1,7,-1,
+                   0,-1,-1,-1, -1,-1,-1,-1, 3,-1,-1,-1, -1,-1,5,-1],
+            lead: [12,-1,-1,15, -1,-1,19,-1, -1,17,-1,15, -1,-1,12,-1,
+                   12,-1,-1,15, -1,-1,19,-1, -1,17,-1,19, -1,-1,22,-1],
+            kick: [0, 16], hat: [4, 12, 20, 28],
+            arp: [12,-1,16,-1, 19,-1,16,-1, 12,-1,16,-1, 19,-1,24,-1,
+                  15,-1,19,-1, 22,-1,19,-1, 15,-1,19,-1, 22,-1,24,-1], arpType: 'sine', arpVol: 0.03, arpOct: 4 },
+  bowl: { bpm: 86, root: 116.5, bassType: 'square', bassVol: 0.07, leadType: 'square', leadVol: 0.035,
+            bass: [0,-1,0,-1, 3,-1,5,-1, 7,-1,5,-1, 3,-1,0,-1,
+                   0,-1,0,-1, 3,-1,5,-1, 7,-1,10,-1, 7,-1,5,-1],
+            lead: [12,-1,-1,15, -1,-1,19,-1, -1,17,-1,15, 12,-1,-1,-1,
+                   12,-1,-1,15, -1,-1,19,-1, -1,17,-1,19, -1,-1,22,-1],
+            kick: [0, 8, 16, 24], hat: [2, 6, 10, 14, 18, 22, 26, 30],
+            arp: [12,-1,15,-1, 19,-1,22,-1, 19,-1,15,-1, 12,-1,15,-1,
+                  15,-1,19,-1, 22,-1,24,-1, 22,-1,19,-1, 15,-1,19,-1], arpType: 'triangle', arpVol: 0.03, arpOct: 2 } };
 function semi(root, st) { return root * Math.pow(2, st / 12); }
 const AudioSys = {
   ctx: null, muted: false, musicInt: null, mStep: 0, noiseBuf: null,
@@ -1978,7 +1923,7 @@ const AudioSys = {
     const stepDur = 60 / song.bpm / 2 * 1000;
     this.musicInt = setInterval(() => {
       if (!this.ctx || this.muted || paused) return;
-      const i = this.mStep % 16;
+      const i = this.mStep % 32;
       const b = song.bass[i], l = song.lead[i];
       if (b >= 0) this.tone(semi(song.root, b), 0.22, song.bassType, song.bassVol);
       if (l >= 0) this.tone(semi(song.root * 2, l), 0.18, song.leadType, song.leadVol);
@@ -2014,7 +1959,7 @@ document.getElementById('phoneBtn').addEventListener('click', e => {
   AudioSys.sfx('open');
   showScreen('pHome');
   overlay.classList.add('open'); closeHint.classList.add('open');
-  squirmyTip('phone', "That's your phone! TamaGotcha lives in there — and WEEDSWEEPER, if you're feeling lucky. 🌿");
+  squirmyTip('phone', "That's your phone! TamaGotcha lives in there. 🥚");
 });
 overlay.addEventListener('click', e => {
   if (e.target === overlay) { overlay.classList.remove('open'); closeHint.classList.remove('open'); AudioSys.sfx('close'); }
@@ -2028,7 +1973,7 @@ document.querySelectorAll('[data-back]').forEach(b =>
 
 const APPS = [
   ['🚪','Room'], ['⭐','Events'], ['📮','Mailbox'], ['👥','Friends'],
-  ['💬','BAM'], ['🥚','TamaGotcha'], ['🌿','WEEDSWEEPER'], ['🌐','MyPlace']
+  ['💬','BAM'], ['🥚','TamaGotcha'], ['🌐','MyPlace']
 ];
 const grid = document.getElementById('appGrid');
 APPS.forEach(([ico, name]) => {
@@ -2039,10 +1984,6 @@ APPS.forEach(([ico, name]) => {
     AudioSys.sfx('click');
     if (name === 'TamaGotcha') showScreen('pTama');
     else if (name === 'BAM') showScreen('pBam');
-    else if (name === 'WEEDSWEEPER') {
-      showScreen('pWeed');
-      squirmyTip('weed', "WEEDSWEEPER! Tap to clear a tile, flag the weeds. Don't get pranked! 🌿");
-    }
     else toast(name + ' — coming in v4');
   });
   grid.appendChild(d);
@@ -2074,113 +2015,6 @@ setInterval(() => {
   if (!paused && document.getElementById('pTama').classList.contains('open')) petUI();
 }, 2000);
 petUI();
-
-// WEEDSWEEPER mini-app
-const WN = 8, WCOUNT = 10;
-let wWeeds = new Set(), wOpen = new Set(), wFlag = new Set(), wOver = false, wFlagMode = false;
-const weedGrid = document.getElementById('weedGrid');
-const weedStatus = document.getElementById('weedStatus');
-const weedFlagBtn = document.getElementById('weedFlag');
-function weedNew() {
-  wWeeds = new Set(); wOpen = new Set(); wFlag = new Set(); wOver = false;
-  while (wWeeds.size < WCOUNT) wWeeds.add(Math.floor(Math.random() * WN * WN));
-  weedStatus.textContent = "find the weeds, don't pick 'em 🌿";
-  weedDraw();
-}
-function weedAdj(i) {
-  const r = Math.floor(i / WN), c = i % WN;
-  let n = 0;
-  for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
-    if (!dr && !dc) continue;
-    const rr = r + dr, cc = c + dc;
-    if (rr >= 0 && rr < WN && cc >= 0 && cc < WN && wWeeds.has(rr * WN + cc)) n++;
-  }
-  return n;
-}
-function weedReveal(i) {
-  if (wOver || wOpen.has(i) || wFlag.has(i)) return;
-  if (wWeeds.has(i)) {
-    wOver = true;
-    AudioSys.sfx('lose');
-    weedStatus.textContent = 'PRANKED!! 🌿😱';
-    wWeeds.forEach(w => wOpen.add(w));
-    weedDraw();
-    return;
-  }
-  const stack = [i];
-  while (stack.length) {
-    const j = stack.pop();
-    if (wOpen.has(j) || wFlag.has(j) || wWeeds.has(j)) continue;
-    wOpen.add(j);
-    if (weedAdj(j) === 0) {
-      const r = Math.floor(j / WN), c = j % WN;
-      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
-        const rr = r + dr, cc = c + dc;
-        if (rr >= 0 && rr < WN && cc >= 0 && cc < WN) stack.push(rr * WN + cc);
-      }
-    }
-  }
-  AudioSys.sfx('dig');
-  tourWeedPlayed = true; // guided tour: played a round
-  if (wOpen.size === WN * WN - WCOUNT) {
-    wOver = true;
-    AudioSys.sfx('win');
-    weedStatus.textContent = 'YARD CLEAN! 🏆✨';
-  }
-  weedDraw();
-}
-function weedDraw() {
-  weedGrid.innerHTML = '';
-  for (let i = 0; i < WN * WN; i++) {
-    const d = document.createElement('div');
-    d.className = 'wcell';
-    if (wOpen.has(i)) {
-      d.classList.add('open');
-      if (wWeeds.has(i)) { d.classList.add('weed'); d.textContent = '🌿'; }
-      else { const n = weedAdj(i); d.textContent = n ? n : ''; }
-    } else if (wFlag.has(i)) {
-      d.textContent = '🚩';
-    }
-    d.addEventListener('click', () => {
-      if (wFlagMode && !wOpen.has(i) && !wOver) {
-        AudioSys.sfx('flag');
-        if (wFlag.has(i)) wFlag.delete(i); else wFlag.add(i);
-        weedDraw();
-      } else weedReveal(i);
-    });
-    d.addEventListener('contextmenu', e => {
-      e.preventDefault();
-      if (!wOpen.has(i) && !wOver) {
-        AudioSys.sfx('flag');
-        if (wFlag.has(i)) wFlag.delete(i); else wFlag.add(i);
-        weedDraw();
-      }
-    });
-    let lpTimer = null;
-    d.addEventListener('touchstart', () => {
-      lpTimer = setTimeout(() => {
-        lpTimer = 'fired';
-        if (!wOpen.has(i) && !wOver) {
-          AudioSys.sfx('flag');
-          if (wFlag.has(i)) wFlag.delete(i); else wFlag.add(i);
-          weedDraw();
-        }
-      }, 450);
-    }, {passive: true});
-    d.addEventListener('touchend', e => {
-      if (lpTimer === 'fired') { e.preventDefault(); lpTimer = null; }
-      else clearTimeout(lpTimer);
-    });
-    weedGrid.appendChild(d);
-  }
-}
-document.getElementById('weedNew').addEventListener('click', () => { AudioSys.sfx('click'); weedNew(); });
-weedFlagBtn.addEventListener('click', () => {
-  wFlagMode = !wFlagMode;
-  weedFlagBtn.textContent = '🚩 Flag: ' + (wFlagMode ? 'on' : 'off');
-  weedFlagBtn.classList.toggle('active', wFlagMode);
-});
-weedNew();
 
 // ---- brass-ring carousel game (Riverslide Park) ----
 const ringGame = document.getElementById('ringGame');
@@ -2442,12 +2276,19 @@ function frame(now) {
     return;
   }
 
-  const left = keys['ArrowLeft'] || keys['a'] || keys['A'] || touchLeft || (mouseDown && mouseDir === 'left');
-  const right = keys['ArrowRight'] || keys['d'] || keys['D'] || touchRight || (mouseDown && mouseDir === 'right');
+  const left = keys['ArrowLeft'] || keys['a'] || keys['A'];
+  const right = keys['ArrowRight'] || keys['d'] || keys['D'];
   // Felis's cinematic meeting interrupts gameplay — no walking during the exchange
   const tourCinematic = tour && tour.step === 0 && tour.seq < 2;
-  const driving = !tourCinematic && left !== right;
-  if (driving) player.dir = right ? 1 : -1;
+  if (tourCinematic) player.tapX = null;
+  // arrow keys override an active tap-run
+  if (left !== right) { player.tapX = null; player.dir = right ? 1 : -1; }
+  else if (player.tapX != null && !tourCinematic) {
+    const dx = player.tapX - player.x;
+    if (Math.abs(dx) < 16) player.tapX = null; // arrived
+    else player.dir = dx > 0 ? 1 : -1;
+  }
+  const driving = !tourCinematic && (left !== right || player.tapX != null);
   // simple acceleration toward the target velocity
   const targetV = driving ? player.dir * SPEED : 0;
   const rate = (driving ? ACCEL : ACCEL * 1.6) * dt;
@@ -2528,22 +2369,18 @@ function drawPlayScene(dt) {
     }
   }
 
-  // the old Stale Theatre — chibi recreation with transparency, drawn big
+  // the old State Theatre — the real 1984 facade
   if (scene === 'street' && theatreImg.naturalWidth) {
-    const th = 380, tw = th * (theatreImg.naturalWidth / theatreImg.naturalHeight);
+    const th = 250, tw = th * (theatreImg.naturalWidth / theatreImg.naturalHeight);
     const gy = H * 0.84;
-    const tx = THEATRE_X - camX - tw / 2, ty = gy - th;
-    ctx.drawImage(theatreImg, tx, ty, tw, th);
-    // marquee chase lights (v4 front facade: two bulb rows on the canopy)
-    for (const rowY of [0.62, 0.76]) {
-      const n = 16;
-      for (let i = 0; i < n; i++) {
-        const fx = 0.30 + (0.70 - 0.30) * (i / (n - 1));
-        const br = 0.35 + 0.65 * Math.max(0, Math.sin(bgT * 7 - i * 0.85));
-        ctx.fillStyle = 'rgba(255,214,90,' + br.toFixed(2) + ')';
-        ctx.beginPath(); ctx.arc(tx + fx * tw, ty + rowY * th, 4.5, 0, 6.283); ctx.fill();
-      }
-    }
+    ctx.drawImage(theatreImg, THEATRE_X - camX - tw / 2, gy - th, tw, th);
+  }
+
+  // BROKENSPORT Mall exterior — the actual Logansport Mall (user's sprite), at the mall door
+  if (scene === 'street' && mallExtImg.naturalWidth) {
+    const w = worldW();
+    const mh = 300, mw = mh * (mallExtImg.naturalWidth / mallExtImg.naturalHeight);
+    ctx.drawImage(mallExtImg, w * 0.88 - camX - mw / 2, H * 0.84 - mh, mw, mh);
   }
 
   // Stroller Stink — chibi recreation with transparency
@@ -2763,29 +2600,36 @@ function drawPlayScene(dt) {
   ctx.ellipse(player.x - camX, groundY + 6, dw * 0.32, 10, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Felis, in the world — 4-frame idle sheet, 2.4s loop (drawn after the player: never buried)
+  // tap-to-run destination marker
+  if (player.tapX != null) {
+    const mx = player.tapX - camX, my = groundY - 26;
+    const pulse = 1 + 0.18 * Math.sin(bgT * 10);
+    ctx.strokeStyle = 'rgba(255,210,63,.95)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(mx, my, 13 * pulse, 0, 6.283); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,210,63,.95)';
+    ctx.beginPath(); ctx.arc(mx, my, 3.5, 0, 6.283); ctx.fill();
+  }
+
+  // Felis floats in the air, strange and bobbing — 4-frame idle sheet, 2.4s loop (drawn after the player: never buried)
   if (felisSheetImg.naturalWidth) {
     const fw = felisSheetImg.naturalWidth / 4, fh = felisSheetImg.naturalHeight;
     const fr = Math.floor(bgT / 0.6) % 4;
     const fhPx = 100, fwPx = fhPx * (fw / fh);
-    const fx = felis.x - camX, fy = H * 0.84;
-    ctx.fillStyle = 'rgba(0,0,0,.15)';
-    ctx.beginPath(); ctx.ellipse(fx, fy + 6, fwPx * 0.3, 8, 0, 0, 6.283); ctx.fill();
+    // strange hover: layered sines for an uneasy float + a slow wobble
+    const bobY = Math.sin(bgT * 1.7) * 14 + Math.sin(bgT * 2.9 + 1.3) * 8;
+    const bobX = Math.sin(bgT * 0.9 + 0.5) * 10;
+    const fx = felis.x - camX + bobX, fy = H * 0.52 + bobY;
     ctx.save();
-    if (felis.dir < 0) { ctx.translate(fx, 0); ctx.scale(-1, 1); ctx.translate(-fx, 0); }
-    ctx.drawImage(felisSheetImg, fr * fw, 0, fw, fh, fx - fwPx / 2, fy - fhPx, fwPx, fhPx);
+    ctx.translate(fx, fy - fhPx / 2);
+    ctx.rotate(Math.sin(bgT * 1.3) * 0.06);
+    if (felis.dir < 0) ctx.scale(-1, 1);
+    ctx.drawImage(felisSheetImg, fr * fw, 0, fw, fh, -fwPx / 2, -fhPx / 2, fwPx, fhPx);
     ctx.restore();
     ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center';
-    ctx.fillText('Felis', fx, fy - fhPx - 8);
+    ctx.fillText('Felis', fx, fy - fhPx / 2 - 8);
+    felis.fy = fy; // cached for tap detection
   }
   lastCamX = camX;
-
-  // Felis's bubble floats above him in the world
-  if (squirmyEl.classList.contains('show')) {
-    const fsx = felis.x - camX;
-    squirmyEl.style.left = Math.max(8, Math.min(W - 170, fsx - 80)) + 'px';
-    squirmyEl.style.bottom = (H * 0.16 + 112) + 'px';
-  }
 }
 requestAnimationFrame(frame);
 </script>
