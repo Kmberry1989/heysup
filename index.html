@@ -941,17 +941,20 @@ function tourStep() {
 // tapping Felis hurries the exchange along
 function startNameExchange() {
   tour.seq = 0;
-  showCaption(TOUR_LINES.move);
   clearTimeout(tour.seqTimer);
-  tour.seqTimer = setTimeout(tourSeqNext, 9000);
+  showCaption(TOUR_LINES.move, () => {
+    clearTimeout(tour.seqTimer);
+    tour.seqTimer = setTimeout(tourSeqNext, 2500); // beat to let it land, then the question
+  });
 }
 function tourSeqNext() {
   if (!tour) return;
   if (tour.seq === 0) {
     tour.seq = 1;
-    showCaption("<span class='who'>You:</span> &ldquo;Felix? Is that you?&rdquo;");
-    clearTimeout(tour.seqTimer);
-    tour.seqTimer = setTimeout(tourSeqNext, 8000);
+    showCaption("<span class='who'>You:</span> &ldquo;Felix? Is that you?&rdquo;", () => {
+      clearTimeout(tour.seqTimer);
+      tour.seqTimer = setTimeout(tourSeqNext, 2500);
+    });
   } else if (tour.seq === 1) {
     tour.seq = 2;
     showCaption(TOUR_LINES.name);
@@ -1288,18 +1291,25 @@ function drawSheetFrame(img, f, cx, feetY, s, rot) {
   if (img.naturalWidth) ctx.drawImage(img, f.x, f.y, f.w, f.h, -dw / 2, -dh, dw, dh);
   ctx.restore();
 }
-let capTimer = null, capQueue = null;
+let capTimer = null, capQueue = null, capComplete = true;
 function detectTone(text) {
-  if (/!!/.test(text)) return { base: 330, jit: 70, rate: 75, type: 'square', slide: 0.85 };
-  if (/\?/.test(text)) return { base: 270, jit: 55, rate: 95, type: 'square', slide: 1.3, rise: true };
-  if (/\u2026|\.\.\./.test(text)) return { base: 150, jit: 25, rate: 160, type: 'sine', slide: 0.7 };
-  if (/[\u201c"]/ .test(text)) return { base: 235, jit: 45, rate: 88, type: 'triangle', slide: 0.9 };
-  return { base: 178, jit: 32, rate: 108, type: 'triangle', slide: 0.9 };
+  if (/!!/.test(text)) return { base: 330, jit: 70, rate: 210, type: 'square', slide: 0.85 };
+  if (/\?/.test(text)) return { base: 270, jit: 55, rate: 260, type: 'square', slide: 1.3, rise: true };
+  if (/\u2026|\.\.\./.test(text)) return { base: 150, jit: 25, rate: 420, type: 'sine', slide: 0.7 };
+  if (/[\u201c"]/ .test(text)) return { base: 235, jit: 45, rate: 240, type: 'triangle', slide: 0.9 };
+  return { base: 178, jit: 32, rate: 300, type: 'triangle', slide: 0.9 };
 }
-function showCaption(html) {
-  if (capTimer) { clearInterval(capTimer); capTimer = null; }
-  capQueue = null;
-  if (!html) { captionEl.innerHTML = ''; captionEl.classList.remove('show'); return; }
+// cadence: linger on punctuation the way a real reading would
+function wordPause(word) {
+  if (/[…]$/.test(word)) return 550;
+  if (/[.!?]$/.test(word)) return 380;
+  if (/[,;:—–]$/.test(word)) return 200;
+  return 0;
+}
+function showCaption(html, onDone) {
+  if (capTimer) { clearTimeout(capTimer); capTimer = null; }
+  capQueue = null; capComplete = true;
+  if (!html) { captionEl.innerHTML = ''; captionEl.classList.remove('show'); if (onDone) onDone(); return; }
   captionEl.classList.add('show');
   const tmp = document.createElement('div');
   tmp.innerHTML = html;
@@ -1310,28 +1320,36 @@ function showCaption(html) {
   });
   const tone = detectTone(tmp.textContent);
   captionEl.innerHTML = '';
+  capComplete = false;
+  let i = 0;
   capQueue = { tokens, i: 0 };
-  capTimer = setInterval(() => {
-    if (paused) return;
+  const tick = () => {
+    if (paused) { capTimer = setTimeout(tick, 200); return; }
     const steps = (mode === 'intro' && INTRO.holding) ? 2 : 1; // text keeps pace while holding
-    for (let s = 0; s < steps; s++) {
-      if (!capQueue || capQueue.i >= tokens.length) {
-        if (capTimer) { clearInterval(capTimer); capTimer = null; }
-        capQueue = null; return;
-      }
-      const t = tokens[capQueue.i++];
+    let lastWord = '';
+    for (let s = 0; s < steps && i < tokens.length; s++) {
+      const t = tokens[i++];
+      lastWord = t.w;
       const sp = document.createElement('span');
       sp.className = 'capword' + (t.cls ? ' ' + t.cls : '');
       sp.textContent = t.w;
       captionEl.appendChild(sp);
       captionEl.appendChild(document.createTextNode(' '));
-      AudioSys.mumble(tone, capQueue.i / tokens.length);
+      AudioSys.mumble(tone, i / tokens.length);
     }
-  }, tone.rate);
+    capQueue.i = i;
+    if (i >= tokens.length) {
+      capTimer = null; capQueue = null; capComplete = true;
+      if (onDone) onDone();
+      return;
+    }
+    capTimer = setTimeout(tick, tone.rate + wordPause(lastWord));
+  };
+  capTimer = setTimeout(tick, tone.rate * 0.6);
 }
 function finishCaptionNow() {
   if (!capTimer || !capQueue) return false;
-  clearInterval(capTimer); capTimer = null;
+  clearTimeout(capTimer); capTimer = null;
   const tokens = capQueue.tokens;
   for (let k = capQueue.i; k < tokens.length; k++) {
     const sp = document.createElement('span');
@@ -1340,12 +1358,12 @@ function finishCaptionNow() {
     captionEl.appendChild(sp);
     captionEl.appendChild(document.createTextNode(' '));
   }
-  capQueue = null;
+  capQueue = null; capComplete = true;
   return true;
 }
 function clearCaption() {
-  if (capTimer) { clearInterval(capTimer); capTimer = null; }
-  capQueue = null;
+  if (capTimer) { clearTimeout(capTimer); capTimer = null; }
+  capQueue = null; capComplete = true;
   captionEl.innerHTML = '';
 }
 function startIntro() {
@@ -1539,7 +1557,8 @@ function drawIntro(dt) {
   INTRO.t += dt;
   INTRO.spin += dt * 4;
   const b = INTRO.beat, bt = INTRO.t;
-  if (bt >= BEATS[b].dur) { nextBeat(); return; }
+  // beats with dialogue wait for the caption to finish blooming — no talking over the action
+  if (bt >= BEATS[b].dur && (capComplete || !BEATS[b].cap)) { nextBeat(); return; }
 
   // rough-landing cutscene: canvas-only, no DOM overlays
   if (b >= 9) { drawLanding(dt); return; }
