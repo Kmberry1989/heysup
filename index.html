@@ -1677,8 +1677,7 @@ function endIntroHold(fromTap) {
     INTRO.holding = false;
     updateIntroHint();
   } else if (fromTap && mode === 'intro') {
-    if (INTRO.readyToAdvance) nextBeat(); // scene's done — tap moves on
-    else finishCaptionNow(); // a quick tap only completes the text — beats can't be skipped
+    if (INTRO.readyToAdvance) nextBeat(); // only advances once the scene has fully played out
   }
 }
 introLayer.addEventListener('pointerup', () => endIntroHold(true));
